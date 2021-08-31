@@ -677,10 +677,10 @@ Hi!
 <p>And another thing<sup class="footnote-ref"><a href="#fn:codeblock-note" id="fnref:codeblock-note">4</a></sup>.</p>
 <p>This doesn't have a referent[^nope].</p>
 <p>Hi!</p>
-<section class="footnotes">
+<section class="footnotes" data-footnotes>
 <ol>
 <li id="fn:1">
-<p>Some <em>bolded</em> footnote definition. <a href="#fnref:1" class="footnote-backref">↩</a></p>
+<p>Some <em>bolded</em> footnote definition. <a href="#fnref:1" class="footnote-backref" aria-label="Jump up">↩</a></p>
 </li>
 <li id="fn:footnote">
 <blockquote>
@@ -688,15 +688,16 @@ Hi!
 </blockquote>
 <pre><code>as well as code blocks
 </code></pre>
-<p>or, naturally, simple paragraphs. <a href="#fnref:footnote" class="footnote-backref">↩</a></p>
+<p>or, naturally, simple paragraphs. <a href="#fnref:footnote" class="footnote-backref" aria-label="Jump up">↩</a></p>
 </li>
 <li id="fn:other-note">
-<p>no code block here (spaces are stripped away) <a href="#fnref:other-note" class="footnote-backref">↩</a></p>
+<p>no code block here (spaces are stripped away) <a href="#fnref:other-note" class="footnote-backref" aria-label="Jump up">↩</a></p>
 </li>
 <li id="fn:codeblock-note">
 <pre><code>this is now a code block (8 spaces indentation)
 </code></pre>
-<a href="#fnref:codeblock-note" class="footnote-backref">↩</a>
+
+<a href="#fnref:codeblock-note" class="footnote-backref" aria-label="Jump up">↩</a>
 </li>
 </ol>
 </section>
@@ -716,7 +717,7 @@ This footnote is referenced[^a-footnote] multiple times, in lots of different pl
 <section class="footnotes">
 <ol>
 <li id="fn:a-footnote">
-<p>This footnote definition should have three backrefs. <a href="#fnref:a-footnote" class="footnote-backref">↩</a> <a href="#fnref:a-footnote:2" class="footnote-backref">↩<sup class="footnote-ref">2</sup></a> <a href="#fnref:a-footnote:3" class="footnote-backref">↩<sup class="footnote-ref">3</sup></a></p>
+<p>This footnote definition should have three backrefs. <a href="#fnref:a-footnote" class="footnote-backref" aria-label="Jump up">↩</a> <a href="#fnref:a-footnote:2" class="footnote-backref" aria-label="Jump up">↩<sup class="footnote-ref">2</sup></a> <a href="#fnref:a-footnote:3" class="footnote-backref" aria-label="Jump up">↩<sup class="footnote-ref">3</sup></a></p>
 </li>
 </ol>
 </section>

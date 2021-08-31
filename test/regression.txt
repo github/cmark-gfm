@@ -4,7 +4,8 @@ Issue #113: EOL character weirdness on Windows
 (Important: first line ends with CR + CR + LF)
 
 ```````````````````````````````` example
-line1
+line1
+
 line2
 .
 <p>line1</p>
@@ -190,10 +191,10 @@ A footnote in a paragraph[^1]
 </tr>
 </tbody>
 </table>
-<section class="footnotes">
+<section class="footnotes" data-footnotes>
 <ol>
 <li id="fn:1">
-<p>a footnote <a href="#fnref:1" class="footnote-backref">↩</a> <a href="#fnref:1:2" class="footnote-backref">↩<sup class="footnote-ref">2</sup></a></p>
+<p>a footnote <a href="#fnref:1" class="footnote-backref" aria-label="Jump up">↩</a> <a href="#fnref:1:2" class="footnote-backref" aria-label="Jump up">↩<sup class="footnote-ref">2</sup></a></p>
 </li>
 </ol>
 </section>
