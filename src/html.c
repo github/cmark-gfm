@@ -423,7 +423,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
 
   case CMARK_NODE_FOOTNOTE_REFERENCE:
     if (entering) {
-      cmark_strbuf_puts(html, "<sup class=\"footnote-ref\" data-footnote-ref><a href=\"#fn:");
+      cmark_strbuf_puts(html, "<sup class=\"footnote-ref\"><a href=\"#fn:");
       cmark_strbuf_put(html, node->parent_footnote_def->as.literal.data, node->parent_footnote_def->as.literal.len);
       cmark_strbuf_puts(html, "\" id=\"fnref:");
       cmark_strbuf_put(html, node->parent_footnote_def->as.literal.data, node->parent_footnote_def->as.literal.len);
@@ -435,7 +435,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
         cmark_strbuf_puts(html, n);
       }
 
-      cmark_strbuf_puts(html, "\">");
+      cmark_strbuf_puts(html, "\" data-footnote-ref>");
       cmark_strbuf_put(html, node->as.literal.data, node->as.literal.len);
       cmark_strbuf_puts(html, "</a></sup>");
     }
