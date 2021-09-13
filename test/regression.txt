@@ -194,6 +194,7 @@ A footnote in a paragraph[^1]
 </tbody>
 </table>
 <section class="footnotes" data-footnotes>
+<h2 id="footnote-label" class="sr-only" data-footnote-label>Footnotes</h2>
 <ol>
 
 <li id="fn:1">
