@@ -66,7 +66,7 @@ static bool S_put_footnote_backref(cmark_html_renderer *renderer, cmark_strbuf *
 
   cmark_strbuf_puts(html, "<a href=\"#fnref:");
   cmark_strbuf_put(html, node->as.literal.data, node->as.literal.len);
-  cmark_strbuf_puts(html, "\" class=\"footnote-backref\" aria-label=\"Jump up\" data-footnote-backref>↩</a>");
+  cmark_strbuf_puts(html, "\" class=\"footnote-backref\" aria-label=\"Back to content\" data-footnote-backref>↩</a>");
 
   if (node->footnote.def_count > 1)
   {
@@ -435,7 +435,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
         cmark_strbuf_puts(html, n);
       }
 
-      cmark_strbuf_puts(html, "\" data-footnote-ref>");
+      cmark_strbuf_puts(html, "\" data-footnote-ref aria-describedby=\"footnote-label\">");
       cmark_strbuf_put(html, node->as.literal.data, node->as.literal.len);
       cmark_strbuf_puts(html, "</a></sup>");
     }
