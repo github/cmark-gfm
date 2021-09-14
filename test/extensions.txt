@@ -679,7 +679,6 @@ Hi!
 <p>This doesn't have a referent[^nope].</p>
 <p>Hi!</p>
 <section class="footnotes" data-footnotes>
-<h2 id="footnote-label" class="sr-only" data-footnote-label>Footnotes</h2>
 <ol>
 <li id="fn:1">
 <p>Some <em>bolded</em> footnote definition. <a href="#fnref:1" class="footnote-backref" aria-label="Back to content" data-footnote-backref>↩</a></p>

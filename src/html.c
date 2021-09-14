@@ -406,7 +406,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
   case CMARK_NODE_FOOTNOTE_DEFINITION:
     if (entering) {
       if (renderer->footnote_ix == 0) {
-        cmark_strbuf_puts(html, "<section class=\"footnotes\" data-footnotes>\n<h2 id=\"footnote-label\" class=\"sr-only\" data-footnote-label>Footnotes</h2>\n<ol>\n");
+        cmark_strbuf_puts(html, "<section class=\"footnotes\" data-footnotes>\n<ol>\n");
       }
       ++renderer->footnote_ix;
 
