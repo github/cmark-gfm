@@ -39,7 +39,7 @@ func (iter *CMarkIter) Next() CMarkEvent {
 	return CMarkEvent(ne)
 }
 
-//Returns the next node in the sequence
+//Returns current node in the sequence
 func (iter *CMarkIter) GetNode() *CMarkNode {
 	return &CMarkNode{
 		node: C.cmark_iter_get_node(iter.iter),
