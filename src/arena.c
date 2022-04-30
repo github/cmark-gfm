@@ -1,8 +1,8 @@
+#include "cmark-gfm-extension_api.h"
+#include "cmark-gfm.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include "cmark-gfm.h"
-#include "cmark-gfm-extension_api.h"
 
 static struct arena_chunk {
   size_t sz, used;
@@ -11,7 +11,8 @@ static struct arena_chunk {
   struct arena_chunk *prev;
 } *A = NULL;
 
-static struct arena_chunk *alloc_arena_chunk(size_t sz, struct arena_chunk *prev) {
+static struct arena_chunk *alloc_arena_chunk(size_t sz,
+                                             struct arena_chunk *prev) {
   struct arena_chunk *c = (struct arena_chunk *)calloc(1, sizeof(*c));
   if (!c)
     abort();
@@ -44,9 +45,7 @@ int cmark_arena_pop(void) {
   return 1;
 }
 
-static void init_arena(void) {
-  A = alloc_arena_chunk(4 * 1048576, NULL);
-}
+static void init_arena(void) { A = alloc_arena_chunk(4 * 1048576, NULL); }
 
 void cmark_arena_reset(void) {
   while (A) {
@@ -70,15 +69,15 @@ static void *arena_calloc(size_t nmem, size_t size) {
 
   if (sz > A->sz) {
     A->prev = alloc_arena_chunk(sz, A->prev);
-    return (uint8_t *) A->prev->ptr + sizeof(size_t);
+    return (uint8_t *)A->prev->ptr + sizeof(size_t);
   }
   if (sz > A->sz - A->used) {
     A = alloc_arena_chunk(A->sz + A->sz / 2, A);
   }
-  void *ptr = (uint8_t *) A->ptr + A->used;
+  void *ptr = (uint8_t *)A->ptr + A->used;
   A->used += sz;
-  *((size_t *) ptr) = sz - sizeof(size_t);
-  return (uint8_t *) ptr + sizeof(size_t);
+  *((size_t *)ptr) = sz - sizeof(size_t);
+  return (uint8_t *)ptr + sizeof(size_t);
 }
 
 static void *arena_realloc(void *ptr, size_t size) {
@@ -87,12 +86,12 @@ static void *arena_realloc(void *ptr, size_t size) {
 
   void *new_ptr = arena_calloc(1, size);
   if (ptr)
-    memcpy(new_ptr, ptr, ((size_t *) ptr)[-1]);
+    memcpy(new_ptr, ptr, ((size_t *)ptr)[-1]);
   return new_ptr;
 }
 
 static void arena_free(void *ptr) {
-  (void) ptr;
+  (void)ptr;
   /* no-op */
 }
 

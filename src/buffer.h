@@ -1,13 +1,13 @@
 #ifndef CMARK_BUFFER_H
 #define CMARK_BUFFER_H
 
-#include <stddef.h>
-#include <stdarg.h>
-#include <string.h>
-#include <limits.h>
-#include <stdint.h>
-#include "config.h"
 #include "cmark-gfm.h"
+#include "config.h"
+#include <limits.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {

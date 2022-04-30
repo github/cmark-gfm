@@ -1,11 +1,11 @@
-#include <stdlib.h>
+#include "buffer.h"
+#include "cmark-gfm.h"
+#include "houdini.h"
+#include "node.h"
+#include "registry.h"
 #include <assert.h>
 #include <stdio.h>
-#include "registry.h"
-#include "node.h"
-#include "houdini.h"
-#include "cmark-gfm.h"
-#include "buffer.h"
+#include <stdlib.h>
 
 cmark_node_type CMARK_NODE_LAST_BLOCK = CMARK_NODE_FOOTNOTE_DEFINITION;
 cmark_node_type CMARK_NODE_LAST_INLINE = CMARK_NODE_FOOTNOTE_REFERENCE;
@@ -32,9 +32,7 @@ static void *xrealloc(void *ptr, size_t size) {
   return new_ptr;
 }
 
-static void xfree(void *ptr) {
-  free(ptr);
-}
+static void xfree(void *ptr) { free(ptr); }
 
 cmark_mem CMARK_DEFAULT_MEM_ALLOCATOR = {xcalloc, xrealloc, xfree};
 

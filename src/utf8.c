@@ -1,6 +1,6 @@
-#include <stdlib.h>
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "cmark_ctype.h"
 #include "utf8.h"

@@ -12,8 +12,9 @@ static void cmark_html_render_cr(cmark_strbuf *html) {
 
 #define BUFFER_SIZE 100
 
-CMARK_INLINE 
-static void cmark_html_render_sourcepos(cmark_node *node, cmark_strbuf *html, int options) {
+CMARK_INLINE
+static void cmark_html_render_sourcepos(cmark_node *node, cmark_strbuf *html,
+                                        int options) {
   char buffer[BUFFER_SIZE];
   if (CMARK_OPT_SOURCEPOS & options) {
     snprintf(buffer, BUFFER_SIZE, " data-sourcepos=\"%d:%d-%d:%d\"",
@@ -22,6 +23,5 @@ static void cmark_html_render_sourcepos(cmark_node *node, cmark_strbuf *html, in
     cmark_strbuf_puts(html, buffer);
   }
 }
-
 
 #endif

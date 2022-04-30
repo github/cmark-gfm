@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-#include "cmark-gfm.h"
 #include "cmark-gfm-extension_api.h"
+#include "cmark-gfm.h"
 
 /**
  * cmark_plugin:
@@ -18,14 +18,11 @@ struct cmark_plugin {
   cmark_llist *syntax_extensions;
 };
 
-cmark_llist *
-cmark_plugin_steal_syntax_extensions(cmark_plugin *plugin);
+cmark_llist *cmark_plugin_steal_syntax_extensions(cmark_plugin *plugin);
 
-cmark_plugin *
-cmark_plugin_new(void);
+cmark_plugin *cmark_plugin_new(void);
 
-void
-cmark_plugin_free(cmark_plugin *plugin);
+void cmark_plugin_free(cmark_plugin *plugin);
 
 #ifdef __cplusplus
 }

@@ -1,16 +1,16 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "config.h"
-#include "cmark-gfm.h"
-#include "node.h"
 #include "buffer.h"
-#include "utf8.h"
-#include "scanners.h"
+#include "cmark-gfm.h"
+#include "config.h"
+#include "node.h"
 #include "render.h"
+#include "scanners.h"
 #include "syntax_extension.h"
+#include "utf8.h"
 
 #define OUT(s, wrap, escaping) renderer->out(renderer, node, s, wrap, escaping)
 #define LIT(s) renderer->out(renderer, node, s, false, LITERAL)
@@ -19,8 +19,8 @@
 #define LIST_NUMBER_STRING_SIZE 20
 
 static CMARK_INLINE void outc(cmark_renderer *renderer, cmark_node *node,
-                              cmark_escaping escape,
-                              int32_t c, unsigned char nextc) {
+                              cmark_escaping escape, int32_t c,
+                              unsigned char nextc) {
   if (escape == LITERAL) {
     cmark_render_code_point(renderer, c);
     return;
@@ -229,7 +229,8 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   bool allow_wrap = renderer->width > 0 && !(CMARK_OPT_NOBREAKS & options);
 
   if (node->extension && node->extension->latex_render_func) {
-    node->extension->latex_render_func(node->extension, renderer, node, ev_type, options);
+    node->extension->latex_render_func(node->extension, renderer, node, ev_type,
+                                       options);
     return 1;
   }
 
@@ -263,13 +264,25 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
                    list_number);
           LIT("\\setcounter{enum");
           switch (enumlevel) {
-          case 1: LIT("i"); break;
-          case 2: LIT("ii"); break;
-          case 3: LIT("iii"); break;
-          case 4: LIT("iv"); break;
-          case 5: LIT("v"); break;
-          default: LIT("i"); break;
-	  }
+          case 1:
+            LIT("i");
+            break;
+          case 2:
+            LIT("ii");
+            break;
+          case 3:
+            LIT("iii");
+            break;
+          case 4:
+            LIT("iv");
+            break;
+          case 5:
+            LIT("v");
+            break;
+          default:
+            LIT("i");
+            break;
+          }
           LIT("}{");
           OUT(list_number_string, false, NORMAL);
           LIT("}");
@@ -409,7 +422,8 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
         LIT("\\url{");
         OUT(url, false, URL);
         LIT("}");
-        return 0; // Don't process further nodes to avoid double-rendering artefacts
+        return 0; // Don't process further nodes to avoid double-rendering
+                  // artefacts
       case EMAIL_AUTOLINK:
         LIT("\\href{");
         OUT(url, false, URL);
@@ -458,9 +472,11 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
 }
 
 char *cmark_render_latex(cmark_node *root, int options, int width) {
-  return cmark_render_latex_with_mem(root, options, width, cmark_node_mem(root));
+  return cmark_render_latex_with_mem(root, options, width,
+                                     cmark_node_mem(root));
 }
 
-char *cmark_render_latex_with_mem(cmark_node *root, int options, int width, cmark_mem *mem) {
+char *cmark_render_latex_with_mem(cmark_node *root, int options, int width,
+                                  cmark_mem *mem) {
   return cmark_render(mem, root, options, width, outc, S_render_node);
 }

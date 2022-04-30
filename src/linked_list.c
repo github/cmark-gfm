@@ -4,7 +4,7 @@
 
 cmark_llist *cmark_llist_append(cmark_mem *mem, cmark_llist *head, void *data) {
   cmark_llist *tmp;
-  cmark_llist *new_node = (cmark_llist *) mem->calloc(1, sizeof(cmark_llist));
+  cmark_llist *new_node = (cmark_llist *)mem->calloc(1, sizeof(cmark_llist));
 
   new_node->data = data;
   new_node->next = NULL;
@@ -12,14 +12,16 @@ cmark_llist *cmark_llist_append(cmark_mem *mem, cmark_llist *head, void *data) {
   if (!head)
     return new_node;
 
-  for (tmp = head; tmp->next; tmp=tmp->next);
+  for (tmp = head; tmp->next; tmp = tmp->next)
+    ;
 
   tmp->next = new_node;
 
   return head;
 }
 
-void cmark_llist_free_full(cmark_mem *mem, cmark_llist *head, cmark_free_func free_func) {
+void cmark_llist_free_full(cmark_mem *mem, cmark_llist *head,
+                           cmark_free_func free_func) {
   cmark_llist *tmp, *prev;
 
   for (tmp = head; tmp;) {

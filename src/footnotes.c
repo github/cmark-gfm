@@ -1,8 +1,8 @@
-#include "cmark-gfm.h"
-#include "parser.h"
 #include "footnotes.h"
-#include "inlines.h"
 #include "chunk.h"
+#include "cmark-gfm.h"
+#include "inlines.h"
+#include "parser.h"
 
 static void footnote_free(cmark_map *map, cmark_map_entry *_ref) {
   cmark_footnote *ref = (cmark_footnote *)_ref;
@@ -53,7 +53,7 @@ void cmark_unlink_footnotes_map(cmark_map *map) {
   cmark_map_entry *next;
 
   ref = map->refs;
-  while(ref) {
+  while (ref) {
     next = ref->next;
     if (((cmark_footnote *)ref)->node) {
       cmark_node_unlink(((cmark_footnote *)ref)->node);

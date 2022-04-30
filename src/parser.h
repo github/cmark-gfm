@@ -1,10 +1,10 @@
 #ifndef CMARK_PARSER_H
 #define CMARK_PARSER_H
 
-#include <stdio.h>
-#include "references.h"
-#include "node.h"
 #include "buffer.h"
+#include "node.h"
+#include "references.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,14 +28,16 @@ struct cmark_parser {
   bufsize_t column;
   /* See the documentation for cmark_parser_get_first_nonspace() in cmark.h */
   bufsize_t first_nonspace;
-  /* See the documentation for cmark_parser_get_first_nonspace_column() in cmark.h */
+  /* See the documentation for cmark_parser_get_first_nonspace_column() in
+   * cmark.h */
   bufsize_t first_nonspace_column;
   bufsize_t thematic_break_kill_pos;
   /* See the documentation for cmark_parser_get_indent() in cmark.h */
   int indent;
   /* See the documentation for cmark_parser_is_blank() in cmark.h */
   bool blank;
-  /* See the documentation for cmark_parser_has_partially_consumed_tab() in cmark.h */
+  /* See the documentation for cmark_parser_has_partially_consumed_tab() in
+   * cmark.h */
   bool partially_consumed_tab;
   /* Contains the currently processed line */
   cmark_strbuf curline;

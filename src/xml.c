@@ -1,13 +1,13 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "config.h"
-#include "cmark-gfm.h"
-#include "node.h"
 #include "buffer.h"
+#include "cmark-gfm.h"
+#include "config.h"
 #include "houdini.h"
+#include "node.h"
 #include "syntax_extension.h"
 
 #define BUFFER_SIZE 100
@@ -52,7 +52,7 @@ static int S_render_node(cmark_node *node, cmark_event_type ev_type,
     }
 
     if (node->extension && node->extension->xml_attr_func) {
-      const char* r = node->extension->xml_attr_func(node->extension, node);
+      const char *r = node->extension->xml_attr_func(node->extension, node);
       if (r != NULL)
         cmark_strbuf_puts(xml, r);
     }

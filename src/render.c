@@ -1,11 +1,11 @@
-#include <stdlib.h>
+#include "render.h"
 #include "buffer.h"
 #include "chunk.h"
 #include "cmark-gfm.h"
-#include "utf8.h"
-#include "render.h"
 #include "node.h"
 #include "syntax_extension.h"
+#include "utf8.h"
+#include <stdlib.h>
 
 static CMARK_INLINE void S_cr(cmark_renderer *renderer) {
   if (renderer->need_cr < 1) {
@@ -20,8 +20,7 @@ static CMARK_INLINE void S_blankline(cmark_renderer *renderer) {
 }
 
 static void S_out(cmark_renderer *renderer, cmark_node *node,
-                  const char *source, bool wrap,
-                  cmark_escaping escape) {
+                  const char *source, bool wrap, cmark_escaping escape) {
   int length = (int)strlen(source);
   unsigned char nextc;
   int32_t c;
@@ -162,9 +161,8 @@ void cmark_render_code_point(cmark_renderer *renderer, uint32_t c) {
 }
 
 char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
-                   void (*outc)(cmark_renderer *, cmark_node *,
-                                cmark_escaping, int32_t,
-                                unsigned char),
+                   void (*outc)(cmark_renderer *, cmark_node *, cmark_escaping,
+                                int32_t, unsigned char),
                    int (*render_node)(cmark_renderer *renderer,
                                       cmark_node *node,
                                       cmark_event_type ev_type, int options)) {
@@ -175,10 +173,9 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
   char *result;
   cmark_iter *iter = cmark_iter_new(root);
 
-  cmark_renderer renderer = {mem,   &buf, &pref, 0,           width,
-                             0,     0,    true,  true,        false,
-                             false, outc, S_cr,  S_blankline, S_out,
-                             0};
+  cmark_renderer renderer = {mem,  &buf,        &pref, 0,     width, 0,
+                             0,    true,        true,  false, false, outc,
+                             S_cr, S_blankline, S_out, 0};
 
   while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
     cur = cmark_iter_get_node(iter);
@@ -191,7 +188,8 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
   }
 
   // ensure final newline
-  if (renderer.buffer->size == 0 || renderer.buffer->ptr[renderer.buffer->size - 1] != '\n') {
+  if (renderer.buffer->size == 0 ||
+      renderer.buffer->ptr[renderer.buffer->size - 1] != '\n') {
     cmark_strbuf_putc(renderer.buffer, '\n');
   }
 

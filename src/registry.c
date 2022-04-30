@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
 #include "cmark-gfm.h"
-#include "syntax_extension.h"
-#include "registry.h"
+#include "config.h"
 #include "plugin.h"
+#include "registry.h"
+#include "syntax_extension.h"
 
 extern cmark_mem CMARK_DEFAULT_MEM_ALLOCATOR;
 
@@ -20,11 +20,13 @@ void cmark_register_plugin(cmark_plugin_init_func reg_fn) {
     return;
   }
 
-  cmark_llist *syntax_extensions_list = cmark_plugin_steal_syntax_extensions(plugin),
+  cmark_llist *syntax_extensions_list =
+                  cmark_plugin_steal_syntax_extensions(plugin),
               *it;
 
   for (it = syntax_extensions_list; it; it = it->next) {
-    syntax_extensions = cmark_llist_append(&CMARK_DEFAULT_MEM_ALLOCATOR, syntax_extensions, it->data);
+    syntax_extensions = cmark_llist_append(&CMARK_DEFAULT_MEM_ALLOCATOR,
+                                           syntax_extensions, it->data);
   }
 
   cmark_llist_free(&CMARK_DEFAULT_MEM_ALLOCATOR, syntax_extensions_list);
@@ -33,10 +35,8 @@ void cmark_register_plugin(cmark_plugin_init_func reg_fn) {
 
 void cmark_release_plugins(void) {
   if (syntax_extensions) {
-    cmark_llist_free_full(
-        &CMARK_DEFAULT_MEM_ALLOCATOR,
-        syntax_extensions,
-        (cmark_free_func) cmark_syntax_extension_free);
+    cmark_llist_free_full(&CMARK_DEFAULT_MEM_ALLOCATOR, syntax_extensions,
+                          (cmark_free_func)cmark_syntax_extension_free);
     syntax_extensions = NULL;
   }
 }
@@ -55,7 +55,7 @@ cmark_syntax_extension *cmark_find_syntax_extension(const char *name) {
   cmark_llist *tmp;
 
   for (tmp = syntax_extensions; tmp; tmp = tmp->next) {
-    cmark_syntax_extension *ext = (cmark_syntax_extension *) tmp->data;
+    cmark_syntax_extension *ext = (cmark_syntax_extension *)tmp->data;
     if (!strcmp(ext->name, name))
       return ext;
   }

@@ -1,18 +1,18 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
+#include "cmark-gfm.h"
 #include "cmark_ctype.h"
 #include "config.h"
+#include "houdini.h"
+#include "inlines.h"
 #include "node.h"
 #include "parser.h"
 #include "references.h"
-#include "cmark-gfm.h"
-#include "houdini.h"
-#include "utf8.h"
 #include "scanners.h"
-#include "inlines.h"
 #include "syntax_extension.h"
+#include "utf8.h"
 
 static const char *EMDASH = "\xE2\x80\x94";
 static const char *ENDASH = "\xE2\x80\x93";
@@ -24,8 +24,10 @@ static const char *RIGHTSINGLEQUOTE = "\xE2\x80\x99";
 
 // Macros for creating various kinds of simple.
 #define make_str(subj, sc, ec, s) make_literal(subj, CMARK_NODE_TEXT, sc, ec, s)
-#define make_code(subj, sc, ec, s) make_literal(subj, CMARK_NODE_CODE, sc, ec, s)
-#define make_raw_html(subj, sc, ec, s) make_literal(subj, CMARK_NODE_HTML_INLINE, sc, ec, s)
+#define make_code(subj, sc, ec, s)                                             \
+  make_literal(subj, CMARK_NODE_CODE, sc, ec, s)
+#define make_raw_html(subj, sc, ec, s)                                         \
+  make_literal(subj, CMARK_NODE_HTML_INLINE, sc, ec, s)
 #define make_linebreak(mem) make_simple(mem, CMARK_NODE_LINEBREAK)
 #define make_softbreak(mem) make_simple(mem, CMARK_NODE_SOFTBREAK)
 #define make_emph(mem) make_simple(mem, CMARK_NODE_EMPH)
@@ -43,7 +45,7 @@ typedef struct bracket {
   bool bracket_after;
 } bracket;
 
-typedef struct subject{
+typedef struct subject {
   cmark_mem *mem;
   cmark_chunk input;
   int line;
@@ -67,10 +69,12 @@ static CMARK_INLINE bool S_is_line_end_char(char c) {
 static delimiter *S_insert_emph(subject *subj, delimiter *opener,
                                 delimiter *closer);
 
-static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent, int options);
+static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent,
+                        int options);
 
-static void subject_from_buf(cmark_mem *mem, int line_number, int block_offset, subject *e,
-                             cmark_chunk *buffer, cmark_map *refmap);
+static void subject_from_buf(cmark_mem *mem, int line_number, int block_offset,
+                             subject *e, cmark_chunk *buffer,
+                             cmark_map *refmap);
 static bufsize_t subject_find_special_char(subject *subj, int options);
 
 // Create an inline with a literal string value.
@@ -97,13 +101,14 @@ static CMARK_INLINE cmark_node *make_simple(cmark_mem *mem, cmark_node_type t) {
 }
 
 // Like make_str, but parses entities.
-static cmark_node *make_str_with_entities(subject *subj,
-                                          int start_column, int end_column,
+static cmark_node *make_str_with_entities(subject *subj, int start_column,
+                                          int end_column,
                                           cmark_chunk *content) {
   cmark_strbuf unescaped = CMARK_BUF_INIT(subj->mem);
 
   if (houdini_unescape_html(&unescaped, content->data, content->len)) {
-    return make_str(subj, start_column, end_column, cmark_chunk_buf_detach(&unescaped));
+    return make_str(subj, start_column, end_column,
+                    cmark_chunk_buf_detach(&unescaped));
   } else {
     return make_str(subj, start_column, end_column, *content);
   }
@@ -143,21 +148,23 @@ static cmark_chunk cmark_clean_autolink(cmark_mem *mem, cmark_chunk *url,
   return cmark_chunk_buf_detach(&buf);
 }
 
-static CMARK_INLINE cmark_node *make_autolink(subject *subj,
-                                              int start_column, int end_column,
-                                              cmark_chunk url, int is_email) {
+static CMARK_INLINE cmark_node *make_autolink(subject *subj, int start_column,
+                                              int end_column, cmark_chunk url,
+                                              int is_email) {
   cmark_node *link = make_simple(subj->mem, CMARK_NODE_LINK);
   link->as.link.url = cmark_clean_autolink(subj->mem, &url, is_email);
   link->as.link.title = cmark_chunk_literal("");
   link->start_line = link->end_line = subj->line;
   link->start_column = start_column + 1;
   link->end_column = end_column + 1;
-  cmark_node_append_child(link, make_str_with_entities(subj, start_column + 1, end_column - 1, &url));
+  cmark_node_append_child(link, make_str_with_entities(subj, start_column + 1,
+                                                       end_column - 1, &url));
   return link;
 }
 
-static void subject_from_buf(cmark_mem *mem, int line_number, int block_offset, subject *e,
-                             cmark_chunk *chunk, cmark_map *refmap) {
+static void subject_from_buf(cmark_mem *mem, int line_number, int block_offset,
+                             subject *e, cmark_chunk *chunk,
+                             cmark_map *refmap) {
   int i;
   e->mem = mem;
   e->input = *chunk;
@@ -179,8 +186,10 @@ static CMARK_INLINE int isbacktick(int c) { return (c == '`'); }
 static CMARK_INLINE unsigned char peek_char_n(subject *subj, bufsize_t n) {
   // NULL bytes should have been stripped out by now.  If they're
   // present, it's a programming error:
-  assert(!(subj->pos + n < subj->input.len && subj->input.data[subj->pos + n] == 0));
-  return (subj->pos + n < subj->input.len) ? subj->input.data[subj->pos + n] : 0;
+  assert(!(subj->pos + n < subj->input.len &&
+           subj->input.data[subj->pos + n] == 0));
+  return (subj->pos + n < subj->input.len) ? subj->input.data[subj->pos + n]
+                                           : 0;
 }
 
 static CMARK_INLINE unsigned char peek_char(subject *subj) {
@@ -238,7 +247,8 @@ static CMARK_INLINE cmark_chunk take_while(subject *subj, int (*f)(int)) {
 // Return the number of newlines in a given span of text in a subject.  If
 // the number is greater than zero, also return the number of characters
 // between the last newline and the end of the span in `since_newline`.
-static int count_newlines(subject *subj, bufsize_t from, bufsize_t len, int *since_newline) {
+static int count_newlines(subject *subj, bufsize_t from, bufsize_t len,
+                          int *since_newline) {
   int nls = 0;
   int since_nl = 0;
 
@@ -261,13 +271,15 @@ static int count_newlines(subject *subj, bufsize_t from, bufsize_t len, int *sin
 // Adjust `node`'s `end_line`, `end_column`, and `subj`'s `line` and
 // `column_offset` according to the number of newlines in a just-matched span
 // of text in `subj`.
-static void adjust_subj_node_newlines(subject *subj, cmark_node *node, int matchlen, int extra, int options) {
+static void adjust_subj_node_newlines(subject *subj, cmark_node *node,
+                                      int matchlen, int extra, int options) {
   if (!(options & CMARK_OPT_SOURCEPOS)) {
     return;
   }
 
   int since_newline;
-  int newlines = count_newlines(subj, subj->pos - matchlen - extra, matchlen, &since_newline);
+  int newlines = count_newlines(subj, subj->pos - matchlen - extra, matchlen,
+                                &since_newline);
   if (newlines) {
     subj->line += newlines;
     node->end_line += newlines;
@@ -332,7 +344,7 @@ static void S_normalize_code(cmark_strbuf *s) {
     switch (s->ptr[r]) {
     case '\r':
       if (s->ptr[r + 1] != '\n') {
-	s->ptr[w++] = ' ';
+        s->ptr[w++] = ' ';
       }
       break;
     case '\n':
@@ -347,16 +359,13 @@ static void S_normalize_code(cmark_strbuf *s) {
   }
 
   // begins and ends with space?
-  if (contains_nonspace &&
-      s->ptr[0] == ' ' && s->ptr[w - 1] == ' ') {
+  if (contains_nonspace && s->ptr[0] == ' ' && s->ptr[w - 1] == ' ') {
     cmark_strbuf_drop(s, 1);
     cmark_strbuf_truncate(s, w - 2);
   } else {
     cmark_strbuf_truncate(s, w);
   }
-
 }
-
 
 // Parse backtick code section or raw backticks, return an inline.
 // Assumes that the subject has a backtick at the current position.
@@ -375,12 +384,13 @@ static cmark_node *handle_backticks(subject *subj, int options) {
                      endpos - startpos - openticks.len);
     S_normalize_code(&buf);
 
-    cmark_node *node = make_code(subj, startpos, endpos - openticks.len - 1, cmark_chunk_buf_detach(&buf));
-    adjust_subj_node_newlines(subj, node, endpos - startpos, openticks.len, options);
+    cmark_node *node = make_code(subj, startpos, endpos - openticks.len - 1,
+                                 cmark_chunk_buf_detach(&buf));
+    adjust_subj_node_newlines(subj, node, endpos - startpos, openticks.len,
+                              options);
     return node;
   }
 }
-
 
 // Scan ***, **, or * and return number scanned, or 0.
 // Advances position.
@@ -398,12 +408,15 @@ static int scan_delims(subject *subj, unsigned char c, bool *can_open,
   } else {
     before_char_pos = subj->pos - 1;
     // walk back to the beginning of the UTF_8 sequence:
-    while ((peek_at(subj, before_char_pos) >> 6 == 2 || SKIP_CHARS[peek_at(subj, before_char_pos)]) && before_char_pos > 0) {
+    while ((peek_at(subj, before_char_pos) >> 6 == 2 ||
+            SKIP_CHARS[peek_at(subj, before_char_pos)]) &&
+           before_char_pos > 0) {
       before_char_pos -= 1;
     }
     len = cmark_utf8proc_iterate(subj->input.data + before_char_pos,
                                  subj->pos - before_char_pos, &before_char);
-    if (len == -1 || (before_char < 256 && SKIP_CHARS[(unsigned char) before_char])) {
+    if (len == -1 ||
+        (before_char < 256 && SKIP_CHARS[(unsigned char)before_char])) {
       before_char = 10;
     }
   }
@@ -422,14 +435,16 @@ static int scan_delims(subject *subj, unsigned char c, bool *can_open,
     after_char = 10;
   } else {
     after_char_pos = subj->pos;
-    while (SKIP_CHARS[peek_at(subj, after_char_pos)] && after_char_pos < subj->input.len) {
+    while (SKIP_CHARS[peek_at(subj, after_char_pos)] &&
+           after_char_pos < subj->input.len) {
       after_char_pos += 1;
     }
     len = cmark_utf8proc_iterate(subj->input.data + after_char_pos,
                                  subj->input.len - after_char_pos, &after_char);
-    if (len == -1 || (after_char < 256 && SKIP_CHARS[(unsigned char) after_char])) {
-    after_char = 10;
-  }
+    if (len == -1 ||
+        (after_char < 256 && SKIP_CHARS[(unsigned char)after_char])) {
+      after_char = 10;
+    }
   }
 
   left_flanking = numdelims > 0 && !cmark_utf8proc_is_space(after_char) &&
@@ -446,8 +461,8 @@ static int scan_delims(subject *subj, unsigned char c, bool *can_open,
     *can_close = right_flanking &&
                  (!left_flanking || cmark_utf8proc_is_punctuation(after_char));
   } else if (c == '\'' || c == '"') {
-    *can_open = left_flanking && !right_flanking &&
-	         before_char != ']' && before_char != ')';
+    *can_open = left_flanking && !right_flanking && before_char != ']' &&
+                before_char != ')';
     *can_close = right_flanking;
   } else {
     *can_open = left_flanking;
@@ -561,7 +576,8 @@ static cmark_node *handle_hyphen(subject *subj, bool smart) {
   advance(subj);
 
   if (!smart || peek_char(subj) != '-') {
-    return make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("-"));
+    return make_str(subj, subj->pos - 1, subj->pos - 1,
+                    cmark_chunk_literal("-"));
   }
 
   while (smart && peek_char(subj) == '-') {
@@ -604,22 +620,28 @@ static cmark_node *handle_period(subject *subj, bool smart) {
     advance(subj);
     if (peek_char(subj) == '.') {
       advance(subj);
-      return make_str(subj, subj->pos - 3, subj->pos - 1, cmark_chunk_literal(ELLIPSES));
+      return make_str(subj, subj->pos - 3, subj->pos - 1,
+                      cmark_chunk_literal(ELLIPSES));
     } else {
-      return make_str(subj, subj->pos - 2, subj->pos - 1, cmark_chunk_literal(".."));
+      return make_str(subj, subj->pos - 2, subj->pos - 1,
+                      cmark_chunk_literal(".."));
     }
   } else {
-    return make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("."));
+    return make_str(subj, subj->pos - 1, subj->pos - 1,
+                    cmark_chunk_literal("."));
   }
 }
 
-static cmark_syntax_extension *get_extension_for_special_char(cmark_parser *parser, unsigned char c) {
+static cmark_syntax_extension *
+get_extension_for_special_char(cmark_parser *parser, unsigned char c) {
   cmark_llist *tmp_ext;
 
-  for (tmp_ext = parser->inline_syntax_extensions; tmp_ext; tmp_ext=tmp_ext->next) {
-    cmark_syntax_extension *ext = (cmark_syntax_extension *) tmp_ext->data;
+  for (tmp_ext = parser->inline_syntax_extensions; tmp_ext;
+       tmp_ext = tmp_ext->next) {
+    cmark_syntax_extension *ext = (cmark_syntax_extension *)tmp_ext->data;
     cmark_llist *tmp_char;
-    for (tmp_char = ext->special_inline_chars; tmp_char; tmp_char=tmp_char->next) {
+    for (tmp_char = ext->special_inline_chars; tmp_char;
+         tmp_char = tmp_char->next) {
       unsigned char tmp_c = (unsigned char)(size_t)tmp_char->data;
 
       if (tmp_c == c) {
@@ -631,7 +653,8 @@ static cmark_syntax_extension *get_extension_for_special_char(cmark_parser *pars
   return NULL;
 }
 
-static void process_emphasis(cmark_parser *parser, subject *subj, delimiter *stack_bottom) {
+static void process_emphasis(cmark_parser *parser, subject *subj,
+                             delimiter *stack_bottom) {
   delimiter *closer = subj->last_delim;
   delimiter *opener;
   delimiter *old_closer;
@@ -641,7 +664,7 @@ static void process_emphasis(cmark_parser *parser, subject *subj, delimiter *sta
 
   // initialize openers_bottom:
   memset(&openers_bottom, 0, sizeof(openers_bottom));
-  for (i=0; i < 3; i++) {
+  for (i = 0; i < 3; i++) {
     openers_bottom[i]['*'] = stack_bottom;
     openers_bottom[i]['_'] = stack_bottom;
     openers_bottom[i]['\''] = stack_bottom;
@@ -655,7 +678,8 @@ static void process_emphasis(cmark_parser *parser, subject *subj, delimiter *sta
 
   // now move forward, looking for closers, and handling each
   while (closer != NULL) {
-    cmark_syntax_extension *extension = get_extension_for_special_char(parser, closer->delim_char);
+    cmark_syntax_extension *extension =
+        get_extension_for_special_char(parser, closer->delim_char);
     if (closer->can_close) {
       // Now look backwards for first matching opener:
       opener = closer->previous;
@@ -666,7 +690,7 @@ static void process_emphasis(cmark_parser *parser, subject *subj, delimiter *sta
           // interior closer of size 2 can't match opener of size 1
           // or of size 1 can't match 2
           if (!(closer->can_open || opener->can_close) ||
-	      closer->length % 3 == 0 ||
+              closer->length % 3 == 0 ||
               (opener->length + closer->length) % 3 != 0) {
             opener_found = true;
             break;
@@ -678,7 +702,8 @@ static void process_emphasis(cmark_parser *parser, subject *subj, delimiter *sta
 
       if (extension) {
         if (opener_found)
-          closer = extension->insert_inline_from_delim(extension, parser, subj, opener, closer);
+          closer = extension->insert_inline_from_delim(extension, parser, subj,
+                                                       opener, closer);
         else
           closer = closer->next;
       } else if (closer->delim_char == '*' || closer->delim_char == '_') {
@@ -707,7 +732,7 @@ static void process_emphasis(cmark_parser *parser, subject *subj, delimiter *sta
       if (!opener_found) {
         // set lower bound for future searches for openers
         openers_bottom[old_closer->length % 3][old_closer->delim_char] =
-		old_closer->previous;
+            old_closer->previous;
         if (!old_closer->can_open) {
           // we can remove a closer that can't be an
           // opener, once we've seen there's no
@@ -792,14 +817,17 @@ static delimiter *S_insert_emph(subject *subj, delimiter *opener,
 static cmark_node *handle_backslash(cmark_parser *parser, subject *subj) {
   advance(subj);
   unsigned char nextchar = peek_char(subj);
-  if ((parser->backslash_ispunct ? parser->backslash_ispunct : cmark_ispunct)(nextchar)) {
+  if ((parser->backslash_ispunct ? parser->backslash_ispunct
+                                 : cmark_ispunct)(nextchar)) {
     // only ascii symbols and newline can be escaped
     advance(subj);
-    return make_str(subj, subj->pos - 2, subj->pos - 1, cmark_chunk_dup(&subj->input, subj->pos - 1, 1));
+    return make_str(subj, subj->pos - 2, subj->pos - 1,
+                    cmark_chunk_dup(&subj->input, subj->pos - 1, 1));
   } else if (!is_eof(subj) && skip_line_end(subj)) {
     return make_linebreak(subj->mem);
   } else {
-    return make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("\\"));
+    return make_str(subj, subj->pos - 1, subj->pos - 1,
+                    cmark_chunk_literal("\\"));
   }
 }
 
@@ -815,10 +843,12 @@ static cmark_node *handle_entity(subject *subj) {
                              subj->input.len - subj->pos);
 
   if (len == 0)
-    return make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("&"));
+    return make_str(subj, subj->pos - 1, subj->pos - 1,
+                    cmark_chunk_literal("&"));
 
   subj->pos += len;
-  return make_str(subj, subj->pos - 1 - len, subj->pos - 1, cmark_chunk_buf_detach(&ent));
+  return make_str(subj, subj->pos - 1 - len, subj->pos - 1,
+                  cmark_chunk_buf_detach(&ent));
 }
 
 // Clean a URL: remove surrounding whitespace, and remove \ that escape
@@ -877,7 +907,8 @@ static cmark_node *handle_pointy_brace(subject *subj, int options) {
     contents = cmark_chunk_dup(&subj->input, subj->pos, matchlen - 1);
     subj->pos += matchlen;
 
-    return make_autolink(subj, subj->pos - 1 - matchlen, subj->pos - 1, contents, 0);
+    return make_autolink(subj, subj->pos - 1 - matchlen, subj->pos - 1,
+                         contents, 0);
   }
 
   // next try to match an email autolink
@@ -886,7 +917,8 @@ static cmark_node *handle_pointy_brace(subject *subj, int options) {
     contents = cmark_chunk_dup(&subj->input, subj->pos, matchlen - 1);
     subj->pos += matchlen;
 
-    return make_autolink(subj, subj->pos - 1 - matchlen, subj->pos - 1, contents, 1);
+    return make_autolink(subj, subj->pos - 1 - matchlen, subj->pos - 1,
+                         contents, 1);
   }
 
   // finally, try to match an html tag
@@ -894,7 +926,8 @@ static cmark_node *handle_pointy_brace(subject *subj, int options) {
   if (matchlen > 0) {
     contents = cmark_chunk_dup(&subj->input, subj->pos - 1, matchlen + 1);
     subj->pos += matchlen;
-    cmark_node *node = make_raw_html(subj, subj->pos - matchlen - 1, subj->pos - 1, contents);
+    cmark_node *node =
+        make_raw_html(subj, subj->pos - matchlen - 1, subj->pos - 1, contents);
     adjust_subj_node_newlines(subj, node, matchlen, 1, options);
     return node;
   }
@@ -904,7 +937,8 @@ static cmark_node *handle_pointy_brace(subject *subj, int options) {
     if (matchlen > 0) {
       contents = cmark_chunk_dup(&subj->input, subj->pos - 1, matchlen + 1);
       subj->pos += matchlen;
-      cmark_node *node = make_raw_html(subj, subj->pos - matchlen - 1, subj->pos - 1, contents);
+      cmark_node *node = make_raw_html(subj, subj->pos - matchlen - 1,
+                                       subj->pos - 1, contents);
       adjust_subj_node_newlines(subj, node, matchlen, 1, options);
       return node;
     }
@@ -966,9 +1000,8 @@ static bufsize_t manual_scan_link_url_2(cmark_chunk *input, bufsize_t offset,
   size_t nb_p = 0;
 
   while (i < input->len) {
-    if (input->data[i] == '\\' &&
-        i + 1 < input-> len &&
-        cmark_ispunct(input->data[i+1]))
+    if (input->data[i] == '\\' && i + 1 < input->len &&
+        cmark_ispunct(input->data[i + 1]))
       i += 2;
     else if (input->data[i] == '(') {
       ++nb_p;
@@ -1053,13 +1086,15 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
   opener = subj->last_bracket;
 
   if (opener == NULL) {
-    return make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("]"));
+    return make_str(subj, subj->pos - 1, subj->pos - 1,
+                    cmark_chunk_literal("]"));
   }
 
   if (!opener->active) {
     // take delimiter off stack
     pop_bracket(subj);
-    return make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("]"));
+    return make_str(subj, subj->pos - 1, subj->pos - 1,
+                    cmark_chunk_literal("]"));
   }
 
   // If we got here, we matched a potential link/image text.
@@ -1135,8 +1170,7 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
 noMatch:
   // If we fall through to here, it means we didn't match a link.
   // What if we're a footnote link?
-  if (parser->options & CMARK_OPT_FOOTNOTES &&
-      opener->inl_text->next &&
+  if (parser->options & CMARK_OPT_FOOTNOTES && opener->inl_text->next &&
       opener->inl_text->next->type == CMARK_NODE_TEXT) {
 
     cmark_chunk *literal = &opener->inl_text->next->as.literal;
@@ -1144,7 +1178,8 @@ noMatch:
     // look back to the opening '[', and skip ahead to the next character
     // if we're looking at a '[^' sequence, and there is other text or nodes
     // after the ^, let's call it a footnote reference.
-    if ((literal->len > 0 && literal->data[0] == '^') && (literal->len > 1 || opener->inl_text->next->next)) {
+    if ((literal->len > 0 && literal->data[0] == '^') &&
+        (literal->len > 1 || opener->inl_text->next->next)) {
 
       // Before we got this far, the `handle_close_bracket` function may have
       // advanced the current state beyond our footnote's actual closing
@@ -1156,7 +1191,8 @@ noMatch:
 
       // the start and end of the footnote ref is the opening and closing brace
       // i.e. the subject's current position, and the opener's start_column
-      int fnref_end_column = subj->pos + subj->column_offset + subj->block_offset;
+      int fnref_end_column =
+          subj->pos + subj->column_offset + subj->block_offset;
       int fnref_start_column = opener->inl_text->start_column;
 
       // any given node delineates a substring of the line being processed,
@@ -1171,7 +1207,8 @@ noMatch:
       //
       // (first, check for underflows)
       if ((fnref_start_column + 2) <= fnref_end_column) {
-        fnref->as.literal = cmark_chunk_dup(literal, 1, (fnref_end_column - fnref_start_column) - 2);
+        fnref->as.literal = cmark_chunk_dup(
+            literal, 1, (fnref_end_column - fnref_start_column) - 2);
       } else {
         fnref->as.literal = cmark_chunk_dup(literal, 1, 0);
       }
@@ -1200,7 +1237,7 @@ noMatch:
       // therefore, here we walk thru the list and free them all up
       cmark_node *next_node;
       cmark_node *current_node = opener->inl_text->next;
-      while(current_node) {
+      while (current_node) {
         next_node = current_node->next;
         cmark_node_free(current_node);
         current_node = next_node;
@@ -1284,31 +1321,31 @@ static cmark_node *handle_newline(subject *subj) {
 
 // "\r\n\\`&_*[]<!"
 static int8_t SPECIAL_CHARS[256] = {
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
-      1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 // " ' . -
 static char SMART_PUNCT_CHARS[] = {
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 static bufsize_t subject_find_special_char(subject *subj, int options) {
@@ -1337,15 +1374,13 @@ void cmark_inlines_remove_special_character(unsigned char c, bool emphasis) {
     SKIP_CHARS[c] = 0;
 }
 
-static cmark_node *try_extensions(cmark_parser *parser,
-                                  cmark_node *parent,
-                                  unsigned char c,
-                                  subject *subj) {
+static cmark_node *try_extensions(cmark_parser *parser, cmark_node *parent,
+                                  unsigned char c, subject *subj) {
   cmark_node *res = NULL;
   cmark_llist *tmp;
 
   for (tmp = parser->inline_syntax_extensions; tmp; tmp = tmp->next) {
-    cmark_syntax_extension *ext = (cmark_syntax_extension *) tmp->data;
+    cmark_syntax_extension *ext = (cmark_syntax_extension *)tmp->data;
     res = ext->match_inline(ext, parser, parent, c, subj);
 
     if (res)
@@ -1357,7 +1392,8 @@ static cmark_node *try_extensions(cmark_parser *parser,
 
 // Parse an inline, advancing subject, and add it as a child of parent.
 // Return 0 if no inline can be parsed, 1 otherwise.
-static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent, int options) {
+static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent,
+                        int options) {
   cmark_node *new_inl = NULL;
   cmark_chunk contents;
   unsigned char c;
@@ -1397,7 +1433,8 @@ static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent,
     break;
   case '[':
     advance(subj);
-    new_inl = make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("["));
+    new_inl =
+        make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("["));
     push_bracket(subj, false, new_inl);
     break;
   case ']':
@@ -1407,10 +1444,12 @@ static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent,
     advance(subj);
     if (peek_char(subj) == '[' && peek_char_n(subj, 1) != '^') {
       advance(subj);
-      new_inl = make_str(subj, subj->pos - 2, subj->pos - 1, cmark_chunk_literal("!["));
+      new_inl = make_str(subj, subj->pos - 2, subj->pos - 1,
+                         cmark_chunk_literal("!["));
       push_bracket(subj, true, new_inl);
     } else {
-      new_inl = make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("!"));
+      new_inl = make_str(subj, subj->pos - 1, subj->pos - 1,
+                         cmark_chunk_literal("!"));
     }
     break;
   default:
@@ -1438,13 +1477,13 @@ static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent,
 }
 
 // Parse inlines from parent's string_content, adding as children of parent.
-void cmark_parse_inlines(cmark_parser *parser,
-                         cmark_node *parent,
-                         cmark_map *refmap,
-                         int options) {
+void cmark_parse_inlines(cmark_parser *parser, cmark_node *parent,
+                         cmark_map *refmap, int options) {
   subject subj;
   cmark_chunk content = {parent->content.ptr, parent->content.size, 0};
-  subject_from_buf(parser->mem, parent->start_line, parent->start_column - 1 + parent->internal_offset, &subj, &content, refmap);
+  subject_from_buf(parser->mem, parent->start_line,
+                   parent->start_column - 1 + parent->internal_offset, &subj,
+                   &content, refmap);
   cmark_chunk_rtrim(&subj.input);
 
   while (!is_eof(&subj) && parse_inline(parser, &subj, parent, options))
@@ -1507,7 +1546,8 @@ bufsize_t cmark_parse_reference_inline(cmark_mem *mem, cmark_chunk *input,
   // parse optional link_title
   beforetitle = subj.pos;
   spnl(&subj);
-  matchlen = subj.pos == beforetitle ? 0 : scan_link_title(&subj.input, subj.pos);
+  matchlen =
+      subj.pos == beforetitle ? 0 : scan_link_title(&subj.input, subj.pos);
   if (matchlen) {
     title = cmark_chunk_dup(&subj.input, subj.pos, matchlen);
     subj.pos += matchlen;
@@ -1538,7 +1578,8 @@ unsigned char cmark_inline_parser_peek_char(cmark_inline_parser *parser) {
   return peek_char(parser);
 }
 
-unsigned char cmark_inline_parser_peek_at(cmark_inline_parser *parser, bufsize_t pos) {
+unsigned char cmark_inline_parser_peek_at(cmark_inline_parser *parser,
+                                          bufsize_t pos) {
   return peek_at(parser, pos);
 }
 
@@ -1546,24 +1587,23 @@ int cmark_inline_parser_is_eof(cmark_inline_parser *parser) {
   return is_eof(parser);
 }
 
-static char *
-my_strndup (const char *s, size_t n)
-{
+static char *my_strndup(const char *s, size_t n) {
   char *result;
-  size_t len = strlen (s);
+  size_t len = strlen(s);
 
   if (n < len)
     len = n;
 
-  result = (char *) malloc (len + 1);
+  result = (char *)malloc(len + 1);
   if (!result)
     return 0;
 
   result[len] = '\0';
-  return (char *) memcpy (result, s, len);
+  return (char *)memcpy(result, s, len);
 }
 
-char *cmark_inline_parser_take_while(cmark_inline_parser *parser, cmark_inline_predicate pred) {
+char *cmark_inline_parser_take_while(cmark_inline_parser *parser,
+                                     cmark_inline_predicate pred) {
   unsigned char c;
   bufsize_t startpos = parser->pos;
   bufsize_t len = 0;
@@ -1573,28 +1613,24 @@ char *cmark_inline_parser_take_while(cmark_inline_parser *parser, cmark_inline_p
     len++;
   }
 
-  return my_strndup((const char *) parser->input.data + startpos, len);
+  return my_strndup((const char *)parser->input.data + startpos, len);
 }
 
 void cmark_inline_parser_push_delimiter(cmark_inline_parser *parser,
-                                  unsigned char c,
-                                  int can_open,
-                                  int can_close,
-                                  cmark_node *inl_text) {
+                                        unsigned char c, int can_open,
+                                        int can_close, cmark_node *inl_text) {
   push_delimiter(parser, c, can_open != 0, can_close != 0, inl_text);
 }
 
-void cmark_inline_parser_remove_delimiter(cmark_inline_parser *parser, delimiter *delim) {
+void cmark_inline_parser_remove_delimiter(cmark_inline_parser *parser,
+                                          delimiter *delim) {
   remove_delimiter(parser, delim);
 }
 
 int cmark_inline_parser_scan_delimiters(cmark_inline_parser *parser,
-                                  int max_delims,
-                                  unsigned char c,
-                                  int *left_flanking,
-                                  int *right_flanking,
-                                  int *punct_before,
-                                  int *punct_after) {
+                                        int max_delims, unsigned char c,
+                                        int *left_flanking, int *right_flanking,
+                                        int *punct_before, int *punct_after) {
   int numdelims = 0;
   bufsize_t before_char_pos;
   int32_t after_char = 0;
@@ -1634,9 +1670,9 @@ int cmark_inline_parser_scan_delimiters(cmark_inline_parser *parser,
   space_after = cmark_utf8proc_is_space(after_char) != 0;
 
   *left_flanking = numdelims > 0 && !cmark_utf8proc_is_space(after_char) &&
-                  !(*punct_after && !space_before && !*punct_before);
+                   !(*punct_after && !space_before && !*punct_before);
   *right_flanking = numdelims > 0 && !cmark_utf8proc_is_space(before_char) &&
-                  !(*punct_before && !space_after && !*punct_after);
+                    !(*punct_before && !space_after && !*punct_after);
 
   return numdelims;
 }
@@ -1669,17 +1705,17 @@ int cmark_inline_parser_in_bracket(cmark_inline_parser *parser, int image) {
 }
 
 void cmark_node_unput(cmark_node *node, int n) {
-	node = node->last_child;
-	while (n > 0 && node && node->type == CMARK_NODE_TEXT) {
-		if (node->as.literal.len < n) {
-			n -= node->as.literal.len;
-			node->as.literal.len = 0;
-		} else {
-			node->as.literal.len -= n;
-			n = 0;
-		}
-		node = node->prev;
-	}
+  node = node->last_child;
+  while (n > 0 && node && node->type == CMARK_NODE_TEXT) {
+    if (node->as.literal.len < n) {
+      n -= node->as.literal.len;
+      node->as.literal.len = 0;
+    } else {
+      node->as.literal.len -= n;
+      n = 0;
+    }
+    node = node->prev;
+  }
 }
 
 delimiter *cmark_inline_parser_get_last_delimiter(cmark_inline_parser *parser) {

@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include "config.h"
 #include "buffer.h"
+#include "config.h"
+#include <stdint.h>
 
 #ifdef HAVE___BUILTIN_EXPECT
 #define likely(x) __builtin_expect((x), 1)
@@ -33,22 +33,19 @@ extern "C" {
 
 CMARK_GFM_EXPORT
 bufsize_t houdini_unescape_ent(cmark_strbuf *ob, const uint8_t *src,
-                                      bufsize_t size);
-CMARK_GFM_EXPORT
-int houdini_escape_html(cmark_strbuf *ob, const uint8_t *src,
                                bufsize_t size);
 CMARK_GFM_EXPORT
-int houdini_escape_html0(cmark_strbuf *ob, const uint8_t *src,
-                                bufsize_t size, int secure);
+int houdini_escape_html(cmark_strbuf *ob, const uint8_t *src, bufsize_t size);
 CMARK_GFM_EXPORT
-int houdini_unescape_html(cmark_strbuf *ob, const uint8_t *src,
-                                 bufsize_t size);
+int houdini_escape_html0(cmark_strbuf *ob, const uint8_t *src, bufsize_t size,
+                         int secure);
+CMARK_GFM_EXPORT
+int houdini_unescape_html(cmark_strbuf *ob, const uint8_t *src, bufsize_t size);
 CMARK_GFM_EXPORT
 void houdini_unescape_html_f(cmark_strbuf *ob, const uint8_t *src,
-                                    bufsize_t size);
+                             bufsize_t size);
 CMARK_GFM_EXPORT
-int houdini_escape_href(cmark_strbuf *ob, const uint8_t *src,
-                               bufsize_t size);
+int houdini_escape_href(cmark_strbuf *ob, const uint8_t *src, bufsize_t size);
 
 #ifdef __cplusplus
 }

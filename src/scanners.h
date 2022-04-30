@@ -1,8 +1,8 @@
 #ifndef CMARK_SCANNERS_H
 #define CMARK_SCANNERS_H
 
-#include "cmark-gfm.h"
 #include "chunk.h"
+#include "cmark-gfm.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,7 +53,8 @@ bufsize_t _scan_footnote_definition(const unsigned char *p);
 #define scan_close_code_fence(c, n) _scan_at(&_scan_close_code_fence, c, n)
 #define scan_entity(c, n) _scan_at(&_scan_entity, c, n)
 #define scan_dangerous_url(c, n) _scan_at(&_scan_dangerous_url, c, n)
-#define scan_footnote_definition(c, n) _scan_at(&_scan_footnote_definition, c, n)
+#define scan_footnote_definition(c, n)                                         \
+  _scan_at(&_scan_footnote_definition, c, n)
 
 #ifdef __cplusplus
 }

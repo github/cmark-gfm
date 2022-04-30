@@ -1,15 +1,15 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "config.h"
-#include "cmark-gfm.h"
-#include "node.h"
 #include "buffer.h"
-#include "utf8.h"
+#include "cmark-gfm.h"
+#include "config.h"
+#include "node.h"
 #include "render.h"
 #include "syntax_extension.h"
+#include "utf8.h"
 
 #define OUT(s, wrap, escaping) renderer->out(renderer, node, s, wrap, escaping)
 #define LIT(s) renderer->out(renderer, node, s, false, LITERAL)
@@ -18,9 +18,8 @@
 #define LIST_NUMBER_SIZE 20
 
 // Functions to convert cmark_nodes to groff man strings.
-static void S_outc(cmark_renderer *renderer, cmark_node *node, 
-                   cmark_escaping escape, int32_t c,
-                   unsigned char nextc) {
+static void S_outc(cmark_renderer *renderer, cmark_node *node,
+                   cmark_escaping escape, int32_t c, unsigned char nextc) {
   (void)(nextc);
 
   if (escape == LITERAL) {
@@ -80,7 +79,8 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   bool allow_wrap = renderer->width > 0 && !(CMARK_OPT_NOBREAKS & options);
 
   if (node->extension && node->extension->man_render_func) {
-    node->extension->man_render_func(node->extension, renderer, node, ev_type, options);
+    node->extension->man_render_func(node->extension, renderer, node, ev_type,
+                                     options);
     return 1;
   }
 
@@ -273,6 +273,7 @@ char *cmark_render_man(cmark_node *root, int options, int width) {
   return cmark_render_man_with_mem(root, options, width, cmark_node_mem(root));
 }
 
-char *cmark_render_man_with_mem(cmark_node *root, int options, int width, cmark_mem *mem) {
+char *cmark_render_man_with_mem(cmark_node *root, int options, int width,
+                                cmark_mem *mem) {
   return cmark_render(mem, root, options, width, S_outc, S_render_node);
 }

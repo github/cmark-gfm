@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "buffer.h"
+#include "entities.inc"
 #include "houdini.h"
 #include "utf8.h"
-#include "entities.inc"
 
 /* Binary tree lookup code for entities added by JGM */
 

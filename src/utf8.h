@@ -1,8 +1,8 @@
 #ifndef CMARK_UTF8_H
 #define CMARK_UTF8_H
 
-#include <stdint.h>
 #include "buffer.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {

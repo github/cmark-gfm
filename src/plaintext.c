@@ -1,6 +1,6 @@
 #include "node.h"
-#include "syntax_extension.h"
 #include "render.h"
+#include "syntax_extension.h"
 
 #define OUT(s, wrap, escaping) renderer->out(renderer, node, s, wrap, escaping)
 #define LIT(s) renderer->out(renderer, node, s, false, LITERAL)
@@ -10,9 +10,9 @@
 
 // Functions to convert cmark_nodes to plain text strings.
 
-static CMARK_INLINE void outc(cmark_renderer *renderer, cmark_node *node, 
-                              cmark_escaping escape,
-                              int32_t c, unsigned char nextc) {
+static CMARK_INLINE void outc(cmark_renderer *renderer, cmark_node *node,
+                              cmark_escaping escape, int32_t c,
+                              unsigned char nextc) {
   cmark_render_code_point(renderer, c);
 }
 
@@ -57,7 +57,8 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   }
 
   if (node->extension && node->extension->plaintext_render_func) {
-    node->extension->plaintext_render_func(node->extension, renderer, node, ev_type, options);
+    node->extension->plaintext_render_func(node->extension, renderer, node,
+                                           ev_type, options);
     return 1;
   }
 
@@ -69,8 +70,9 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     break;
 
   case CMARK_NODE_LIST:
-    if (!entering && node->next && (node->next->type == CMARK_NODE_CODE_BLOCK ||
-                                    node->next->type == CMARK_NODE_LIST)) {
+    if (!entering && node->next &&
+        (node->next->type == CMARK_NODE_CODE_BLOCK ||
+         node->next->type == CMARK_NODE_LIST)) {
       CR();
     }
     break;
@@ -194,7 +196,8 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   case CMARK_NODE_FOOTNOTE_REFERENCE:
     if (entering) {
       LIT("[^");
-      OUT(cmark_chunk_to_cstr(renderer->mem, &node->as.literal), false, LITERAL);
+      OUT(cmark_chunk_to_cstr(renderer->mem, &node->as.literal), false,
+          LITERAL);
       LIT("]");
     }
     break;
@@ -222,10 +225,12 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
 }
 
 char *cmark_render_plaintext(cmark_node *root, int options, int width) {
-  return cmark_render_plaintext_with_mem(root, options, width, cmark_node_mem(root));
+  return cmark_render_plaintext_with_mem(root, options, width,
+                                         cmark_node_mem(root));
 }
 
-char *cmark_render_plaintext_with_mem(cmark_node *root, int options, int width, cmark_mem *mem) {
+char *cmark_render_plaintext_with_mem(cmark_node *root, int options, int width,
+                                      cmark_mem *mem) {
   if (options & CMARK_OPT_HARDBREAKS) {
     // disable breaking on width, since it has
     // a different meaning with OPT_HARDBREAKS

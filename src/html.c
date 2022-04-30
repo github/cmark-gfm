@@ -1,15 +1,15 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+#include "html.h"
+#include "cmark-gfm.h"
 #include "cmark_ctype.h"
 #include "config.h"
-#include "cmark-gfm.h"
 #include "houdini.h"
+#include "render.h"
 #include "scanners.h"
 #include "syntax_extension.h"
-#include "html.h"
-#include "render.h"
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Functions to convert cmark_nodes to HTML strings.
 
@@ -18,7 +18,8 @@ static void escape_html(cmark_strbuf *dest, const unsigned char *source,
   houdini_escape_html0(dest, source, length, 0);
 }
 
-static void filter_html_block(cmark_html_renderer *renderer, uint8_t *data, size_t len) {
+static void filter_html_block(cmark_html_renderer *renderer, uint8_t *data,
+                              size_t len) {
   cmark_strbuf *html = renderer->html;
   cmark_llist *it;
   cmark_syntax_extension *ext;
@@ -26,7 +27,7 @@ static void filter_html_block(cmark_html_renderer *renderer, uint8_t *data, size
   uint8_t *match;
 
   while (len) {
-    match = (uint8_t *) memchr(data, '<', len);
+    match = (uint8_t *)memchr(data, '<', len);
     if (!match)
       break;
 
@@ -38,7 +39,7 @@ static void filter_html_block(cmark_html_renderer *renderer, uint8_t *data, size
 
     filtered = false;
     for (it = renderer->filter_extensions; it; it = it->next) {
-      ext = ((cmark_syntax_extension *) it->data);
+      ext = ((cmark_syntax_extension *)it->data);
       if (!ext->html_filter_func(ext, data, len)) {
         filtered = true;
         break;
@@ -59,18 +60,19 @@ static void filter_html_block(cmark_html_renderer *renderer, uint8_t *data, size
     cmark_strbuf_put(html, data, (bufsize_t)len);
 }
 
-static bool S_put_footnote_backref(cmark_html_renderer *renderer, cmark_strbuf *html, cmark_node *node) {
+static bool S_put_footnote_backref(cmark_html_renderer *renderer,
+                                   cmark_strbuf *html, cmark_node *node) {
   if (renderer->written_footnote_ix >= renderer->footnote_ix)
     return false;
   renderer->written_footnote_ix = renderer->footnote_ix;
 
   cmark_strbuf_puts(html, "<a href=\"#fnref-");
   houdini_escape_href(html, node->as.literal.data, node->as.literal.len);
-  cmark_strbuf_puts(html, "\" class=\"footnote-backref\" data-footnote-backref aria-label=\"Back to content\">↩</a>");
+  cmark_strbuf_puts(html, "\" class=\"footnote-backref\" data-footnote-backref "
+                          "aria-label=\"Back to content\">↩</a>");
 
-  if (node->footnote.def_count > 1)
-  {
-    for(int i = 2; i <= node->footnote.def_count; i++) {
+  if (node->footnote.def_count > 1) {
+    for (int i = 2; i <= node->footnote.def_count; i++) {
       char n[32];
       snprintf(n, sizeof(n), "%d", i);
 
@@ -78,7 +80,9 @@ static bool S_put_footnote_backref(cmark_html_renderer *renderer, cmark_strbuf *
       houdini_escape_href(html, node->as.literal.data, node->as.literal.len);
       cmark_strbuf_puts(html, "-");
       cmark_strbuf_puts(html, n);
-      cmark_strbuf_puts(html, "\" class=\"footnote-backref\" data-footnote-backref aria-label=\"Back to content\">↩<sup class=\"footnote-ref\">");
+      cmark_strbuf_puts(
+          html, "\" class=\"footnote-backref\" data-footnote-backref "
+                "aria-label=\"Back to content\">↩<sup class=\"footnote-ref\">");
       cmark_strbuf_puts(html, n);
       cmark_strbuf_puts(html, "</sup></a>");
     }
@@ -126,7 +130,8 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
   }
 
   if (node->extension && node->extension->html_render_func) {
-    node->extension->html_render_func(node->extension, renderer, node, ev_type, options);
+    node->extension->html_render_func(node->extension, renderer, node, ev_type,
+                                      options);
     return 1;
   }
 
@@ -217,9 +222,11 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
         cmark_html_render_sourcepos(node, html, options);
         cmark_strbuf_puts(html, " lang=\"");
         escape_html(html, node->as.code.info.data, first_tag);
-        if (first_tag < node->as.code.info.len && (options & CMARK_OPT_FULL_INFO_STRING)) {
+        if (first_tag < node->as.code.info.len &&
+            (options & CMARK_OPT_FULL_INFO_STRING)) {
           cmark_strbuf_puts(html, "\" data-meta=\"");
-          escape_html(html, node->as.code.info.data + first_tag + 1, node->as.code.info.len - first_tag - 1);
+          escape_html(html, node->as.code.info.data + first_tag + 1,
+                      node->as.code.info.len - first_tag - 1);
         }
         cmark_strbuf_puts(html, "\"><code>");
       } else {
@@ -227,9 +234,11 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
         cmark_html_render_sourcepos(node, html, options);
         cmark_strbuf_puts(html, "><code class=\"language-");
         escape_html(html, node->as.code.info.data, first_tag);
-        if (first_tag < node->as.code.info.len && (options & CMARK_OPT_FULL_INFO_STRING)) {
+        if (first_tag < node->as.code.info.len &&
+            (options & CMARK_OPT_FULL_INFO_STRING)) {
           cmark_strbuf_puts(html, "\" data-meta=\"");
-          escape_html(html, node->as.code.info.data + first_tag + 1, node->as.code.info.len - first_tag - 1);
+          escape_html(html, node->as.code.info.data + first_tag + 1,
+                      node->as.code.info.len - first_tag - 1);
         }
         cmark_strbuf_puts(html, "\">");
       }
@@ -285,7 +294,8 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
         cmark_html_render_sourcepos(node, html, options);
         cmark_strbuf_putc(html, '>');
       } else {
-        if (parent->type == CMARK_NODE_FOOTNOTE_DEFINITION && node->next == NULL) {
+        if (parent->type == CMARK_NODE_FOOTNOTE_DEFINITION &&
+            node->next == NULL) {
           cmark_strbuf_putc(html, ' ');
           S_put_footnote_backref(renderer, html, parent);
         }
@@ -324,8 +334,9 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
     } else {
       filtered = false;
       for (it = renderer->filter_extensions; it; it = it->next) {
-        ext = (cmark_syntax_extension *) it->data;
-        if (!ext->html_filter_func(ext, node->as.literal.data, node->as.literal.len)) {
+        ext = (cmark_syntax_extension *)it->data;
+        if (!ext->html_filter_func(ext, node->as.literal.data,
+                                   node->as.literal.len)) {
           filtered = true;
           break;
         }
@@ -334,7 +345,8 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
         cmark_strbuf_put(html, node->as.literal.data, node->as.literal.len);
       } else {
         cmark_strbuf_puts(html, "&lt;");
-        cmark_strbuf_put(html, node->as.literal.data + 1, node->as.literal.len - 1);
+        cmark_strbuf_put(html, node->as.literal.data + 1,
+                         node->as.literal.len - 1);
       }
     }
     break;
@@ -369,7 +381,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
     if (entering) {
       cmark_strbuf_puts(html, "<a href=\"");
       if ((options & CMARK_OPT_UNSAFE) ||
-            !(scan_dangerous_url(&node->as.link.url, 0))) {
+          !(scan_dangerous_url(&node->as.link.url, 0))) {
         houdini_escape_href(html, node->as.link.url.data,
                             node->as.link.url.len);
       }
@@ -387,7 +399,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
     if (entering) {
       cmark_strbuf_puts(html, "<img src=\"");
       if ((options & CMARK_OPT_UNSAFE) ||
-            !(scan_dangerous_url(&node->as.link.url, 0))) {
+          !(scan_dangerous_url(&node->as.link.url, 0))) {
         houdini_escape_href(html, node->as.link.url.data,
                             node->as.link.url.len);
       }
@@ -406,7 +418,8 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
   case CMARK_NODE_FOOTNOTE_DEFINITION:
     if (entering) {
       if (renderer->footnote_ix == 0) {
-        cmark_strbuf_puts(html, "<section class=\"footnotes\" data-footnotes>\n<ol>\n");
+        cmark_strbuf_puts(
+            html, "<section class=\"footnotes\" data-footnotes>\n<ol>\n");
       }
       ++renderer->footnote_ix;
 
@@ -424,9 +437,11 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
   case CMARK_NODE_FOOTNOTE_REFERENCE:
     if (entering) {
       cmark_strbuf_puts(html, "<sup class=\"footnote-ref\"><a href=\"#fn-");
-      houdini_escape_href(html, node->parent_footnote_def->as.literal.data, node->parent_footnote_def->as.literal.len);
+      houdini_escape_href(html, node->parent_footnote_def->as.literal.data,
+                          node->parent_footnote_def->as.literal.len);
       cmark_strbuf_puts(html, "\" id=\"fnref-");
-      houdini_escape_href(html, node->parent_footnote_def->as.literal.data, node->parent_footnote_def->as.literal.len);
+      houdini_escape_href(html, node->parent_footnote_def->as.literal.data,
+                          node->parent_footnote_def->as.literal.len);
 
       if (node->footnote.ref_ix > 1) {
         char n[32];
@@ -449,11 +464,14 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
   return 1;
 }
 
-char *cmark_render_html(cmark_node *root, int options, cmark_llist *extensions) {
-  return cmark_render_html_with_mem(root, options, extensions, cmark_node_mem(root));
+char *cmark_render_html(cmark_node *root, int options,
+                        cmark_llist *extensions) {
+  return cmark_render_html_with_mem(root, options, extensions,
+                                    cmark_node_mem(root));
 }
 
-char *cmark_render_html_with_mem(cmark_node *root, int options, cmark_llist *extensions, cmark_mem *mem) {
+char *cmark_render_html_with_mem(cmark_node *root, int options,
+                                 cmark_llist *extensions, cmark_mem *mem) {
   char *result;
   cmark_strbuf html = CMARK_BUF_INIT(mem);
   cmark_event_type ev_type;
@@ -462,11 +480,10 @@ char *cmark_render_html_with_mem(cmark_node *root, int options, cmark_llist *ext
   cmark_iter *iter = cmark_iter_new(root);
 
   for (; extensions; extensions = extensions->next)
-    if (((cmark_syntax_extension *) extensions->data)->html_filter_func)
-      renderer.filter_extensions = cmark_llist_append(
-          mem,
-          renderer.filter_extensions,
-          (cmark_syntax_extension *) extensions->data);
+    if (((cmark_syntax_extension *)extensions->data)->html_filter_func)
+      renderer.filter_extensions =
+          cmark_llist_append(mem, renderer.filter_extensions,
+                             (cmark_syntax_extension *)extensions->data);
 
   while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
     cur = cmark_iter_get_node(iter);

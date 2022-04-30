@@ -1,6 +1,6 @@
 #include "map.h"
-#include "utf8.h"
 #include "parser.h"
+#include "utf8.h"
 
 // normalize map label:  collapse internal whitespace to single space,
 // remove leading/trailing whitespace, case fold
@@ -31,21 +31,18 @@ unsigned char *normalize_map_label(cmark_mem *mem, cmark_chunk *ref) {
   return result;
 }
 
-static int
-labelcmp(const unsigned char *a, const unsigned char *b) {
+static int labelcmp(const unsigned char *a, const unsigned char *b) {
   return strcmp((const char *)a, (const char *)b);
 }
 
-static int
-refcmp(const void *p1, const void *p2) {
+static int refcmp(const void *p1, const void *p2) {
   cmark_map_entry *r1 = *(cmark_map_entry **)p1;
   cmark_map_entry *r2 = *(cmark_map_entry **)p2;
   int res = labelcmp(r1->label, r2->label);
   return res ? res : ((int)r1->age - (int)r2->age);
 }
 
-static int
-refsearch(const void *label, const void *p2) {
+static int refsearch(const void *label, const void *p2) {
   cmark_map_entry *ref = *(cmark_map_entry **)p2;
   return labelcmp((const unsigned char *)label, ref->label);
 }
@@ -54,7 +51,8 @@ static void sort_map(cmark_map *map) {
   unsigned int i = 0, last = 0, size = map->size;
   cmark_map_entry *r = map->refs, **sorted = NULL;
 
-  sorted = (cmark_map_entry **)map->mem->calloc(size, sizeof(cmark_map_entry *));
+  sorted =
+      (cmark_map_entry **)map->mem->calloc(size, sizeof(cmark_map_entry *));
   while (r) {
     sorted[i++] = r;
     r = r->next;
@@ -88,7 +86,8 @@ cmark_map_entry *cmark_map_lookup(cmark_map *map, cmark_chunk *label) {
   if (!map->sorted)
     sort_map(map);
 
-  ref = (cmark_map_entry **)bsearch(norm, map->sorted, map->size, sizeof(cmark_map_entry *), refsearch);
+  ref = (cmark_map_entry **)bsearch(norm, map->sorted, map->size,
+                                    sizeof(cmark_map_entry *), refsearch);
   map->mem->free(norm);
 
   if (!ref)

@@ -1,15 +1,11 @@
+#include "cmark-gfm-core-extensions.h"
+#include "cmark-gfm.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "cmark-gfm.h"
-#include "cmark-gfm-core-extensions.h"
 
 const char *extension_names[] = {
-  "autolink",
-  "strikethrough",
-  "table",
-  "tagfilter",
-  NULL,
+    "autolink", "strikethrough", "table", "tagfilter", NULL,
 };
 
 int LLVMFuzzerInitialize(int *argc, char ***argv) {
@@ -17,7 +13,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv) {
   return 0;
 }
 
-int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   struct __attribute__((packed)) {
     int options;
     int width;
@@ -34,7 +30,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     for (const char **it = extension_names; *it; ++it) {
       const char *extension_name = *it;
-      cmark_syntax_extension *syntax_extension = cmark_find_syntax_extension(extension_name);
+      cmark_syntax_extension *syntax_extension =
+          cmark_find_syntax_extension(extension_name);
       if (!syntax_extension) {
         fprintf(stderr, "%s is not a valid syntax extension\n", extension_name);
         abort();

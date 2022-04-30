@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "config.h"
-#include "node.h"
 #include "cmark-gfm.h"
+#include "config.h"
 #include "iterator.h"
+#include "node.h"
 
 cmark_iter *cmark_iter_new(cmark_node *root) {
   if (root == NULL) {

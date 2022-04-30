@@ -1,15 +1,14 @@
-#include <stdarg.h>
-#include <string.h>
 #include <assert.h>
-#include <string.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <limits.h>
+#include <string.h>
 
-#include "config.h"
-#include "cmark_ctype.h"
 #include "buffer.h"
+#include "cmark_ctype.h"
+#include "config.h"
 
 /* Used as default value for cmark_strbuf->ptr so that people can always
  * assume ptr is non-NULL and zero terminated even for new cmark_strbufs.
@@ -42,9 +41,10 @@ void cmark_strbuf_grow(cmark_strbuf *buf, bufsize_t target_size) {
     return;
 
   if (target_size > (bufsize_t)(INT32_MAX / 2)) {
-    fprintf(stderr,
-      "[cmark] cmark_strbuf_grow requests buffer with size > %d, aborting\n",
-         (INT32_MAX / 2));
+    fprintf(
+        stderr,
+        "[cmark] cmark_strbuf_grow requests buffer with size > %d, aborting\n",
+        (INT32_MAX / 2));
     abort();
   }
 
@@ -116,7 +116,8 @@ void cmark_strbuf_put(cmark_strbuf *buf, const unsigned char *data,
 }
 
 void cmark_strbuf_puts(cmark_strbuf *buf, const char *string) {
-  cmark_strbuf_put(buf, (const unsigned char *)string, (bufsize_t)strlen(string));
+  cmark_strbuf_put(buf, (const unsigned char *)string,
+                   (bufsize_t)strlen(string));
 }
 
 void cmark_strbuf_copy_cstr(char *data, bufsize_t datasize,
@@ -159,8 +160,10 @@ unsigned char *cmark_strbuf_detach(cmark_strbuf *buf) {
 
 int cmark_strbuf_cmp(const cmark_strbuf *a, const cmark_strbuf *b) {
   int result = memcmp(a->ptr, b->ptr, MIN(a->size, b->size));
-  return (result != 0) ? result
-                       : (a->size < b->size) ? -1 : (a->size > b->size) ? 1 : 0;
+  return (result != 0)         ? result
+         : (a->size < b->size) ? -1
+         : (a->size > b->size) ? 1
+                               : 0;
 }
 
 bufsize_t cmark_strbuf_strchr(const cmark_strbuf *buf, int c, bufsize_t pos) {

@@ -5,23 +5,23 @@
  * see http://spec.commonmark.org/0.24/#phase-1-block-structure
  */
 
-#include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "cmark_ctype.h"
-#include "syntax_extension.h"
-#include "config.h"
-#include "parser.h"
-#include "cmark-gfm.h"
-#include "node.h"
-#include "references.h"
-#include "utf8.h"
-#include "scanners.h"
-#include "inlines.h"
-#include "houdini.h"
 #include "buffer.h"
+#include "cmark-gfm.h"
+#include "cmark_ctype.h"
+#include "config.h"
 #include "footnotes.h"
+#include "houdini.h"
+#include "inlines.h"
+#include "node.h"
+#include "parser.h"
+#include "references.h"
+#include "scanners.h"
+#include "syntax_extension.h"
+#include "utf8.h"
 
 #define CODE_INDENT 4
 #define TAB_STOP 4
@@ -92,10 +92,11 @@ static cmark_node *make_document(cmark_mem *mem) {
 
 int cmark_parser_attach_syntax_extension(cmark_parser *parser,
                                          cmark_syntax_extension *extension) {
-  parser->syntax_extensions = cmark_llist_append(parser->mem, parser->syntax_extensions, extension);
+  parser->syntax_extensions =
+      cmark_llist_append(parser->mem, parser->syntax_extensions, extension);
   if (extension->match_inline || extension->insert_inline_from_delim) {
     parser->inline_syntax_extensions = cmark_llist_append(
-      parser->mem, parser->inline_syntax_extensions, extension);
+        parser->mem, parser->inline_syntax_extensions, extension);
   }
 
   return 1;
@@ -242,11 +243,12 @@ static void remove_trailing_blank_lines(cmark_strbuf *ln) {
 // if needed into lists and sublists.
 static bool S_ends_with_blank_line(cmark_node *node) {
   if (S_last_line_checked(node)) {
-    return(S_last_line_blank(node));
+    return (S_last_line_blank(node));
   } else if ((S_type(node) == CMARK_NODE_LIST ||
-              S_type(node) == CMARK_NODE_ITEM) && node->last_child) {
+              S_type(node) == CMARK_NODE_ITEM) &&
+             node->last_child) {
     S_set_last_line_checked(node);
-    return(S_ends_with_blank_line(node->last_child));
+    return (S_ends_with_blank_line(node->last_child));
   } else {
     S_set_last_line_checked(node);
     return (S_last_line_blank(node));
@@ -254,15 +256,14 @@ static bool S_ends_with_blank_line(cmark_node *node) {
 }
 
 // returns true if content remains after link defs are resolved.
-static bool resolve_reference_link_definitions(
-		cmark_parser *parser,
-                cmark_node *b) {
+static bool resolve_reference_link_definitions(cmark_parser *parser,
+                                               cmark_node *b) {
   bufsize_t pos;
   cmark_strbuf *node_content = &b->content;
   cmark_chunk chunk = {node_content->ptr, node_content->size, 0};
   while (chunk.len && chunk.data[0] == '[' &&
          (pos = cmark_parse_reference_inline(parser->mem, &chunk,
-					     parser->refmap))) {
+                                             parser->refmap))) {
 
     chunk.data += pos;
     chunk.len -= pos;
@@ -304,8 +305,7 @@ static cmark_node *finalize(cmark_parser *parser, cmark_node *b) {
   cmark_strbuf *node_content = &b->content;
 
   switch (S_type(b)) {
-  case CMARK_NODE_PARAGRAPH:
-  {
+  case CMARK_NODE_PARAGRAPH: {
     has_content = resolve_reference_link_definitions(parser, b);
     if (!has_content) {
       // remove blank node (former reference def)
@@ -359,8 +359,7 @@ static cmark_node *finalize(cmark_parser *parser, cmark_node *b) {
       // spaces between them:
       subitem = item->first_child;
       while (subitem) {
-        if ((item->next || subitem->next) &&
-            S_ends_with_blank_line(subitem)) {
+        if ((item->next || subitem->next) && S_ends_with_blank_line(subitem)) {
           b->as.list.tight = false;
           break;
         }
@@ -410,10 +409,12 @@ static cmark_node *add_child(cmark_parser *parser, cmark_node *parent,
 void cmark_manage_extensions_special_characters(cmark_parser *parser, int add) {
   cmark_llist *tmp_ext;
 
-  for (tmp_ext = parser->inline_syntax_extensions; tmp_ext; tmp_ext=tmp_ext->next) {
-    cmark_syntax_extension *ext = (cmark_syntax_extension *) tmp_ext->data;
+  for (tmp_ext = parser->inline_syntax_extensions; tmp_ext;
+       tmp_ext = tmp_ext->next) {
+    cmark_syntax_extension *ext = (cmark_syntax_extension *)tmp_ext->data;
     cmark_llist *tmp_char;
-    for (tmp_char = ext->special_inline_chars; tmp_char; tmp_char=tmp_char->next) {
+    for (tmp_char = ext->special_inline_chars; tmp_char;
+         tmp_char = tmp_char->next) {
       unsigned char c = (unsigned char)(size_t)tmp_char->data;
       if (add)
         cmark_inlines_add_special_character(c, ext->emphasis);
@@ -425,8 +426,8 @@ void cmark_manage_extensions_special_characters(cmark_parser *parser, int add) {
 
 // Walk through node and all children, recursively, parsing
 // string content into inline content where appropriate.
-static void process_inlines(cmark_parser *parser,
-                            cmark_map *refmap, int options) {
+static void process_inlines(cmark_parser *parser, cmark_map *refmap,
+                            int options) {
   cmark_iter *iter = cmark_iter_new(parser->root);
   cmark_node *cur;
   cmark_event_type ev_type;
@@ -467,7 +468,8 @@ static void process_footnotes(cmark_parser *parser) {
 
   while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
     cur = cmark_iter_get_node(iter);
-    if (ev_type == CMARK_EVENT_EXIT && cur->type == CMARK_NODE_FOOTNOTE_DEFINITION) {
+    if (ev_type == CMARK_EVENT_EXIT &&
+        cur->type == CMARK_NODE_FOOTNOTE_DEFINITION) {
       cmark_footnote_create(map, cur);
     }
   }
@@ -478,8 +480,10 @@ static void process_footnotes(cmark_parser *parser) {
 
   while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
     cur = cmark_iter_get_node(iter);
-    if (ev_type == CMARK_EVENT_EXIT && cur->type == CMARK_NODE_FOOTNOTE_REFERENCE) {
-      cmark_footnote *footnote = (cmark_footnote *)cmark_map_lookup(map, &cur->as.literal);
+    if (ev_type == CMARK_EVENT_EXIT &&
+        cur->type == CMARK_NODE_FOOTNOTE_REFERENCE) {
+      cmark_footnote *footnote =
+          (cmark_footnote *)cmark_map_lookup(map, &cur->as.literal);
       if (footnote) {
         if (!footnote->ix)
           footnote->ix = ++ix;
@@ -503,7 +507,7 @@ static void process_footnotes(cmark_parser *parser) {
       } else {
         cmark_node *text = (cmark_node *)parser->mem->calloc(1, sizeof(*text));
         cmark_strbuf_init(parser->mem, &text->content, 0);
-        text->type = (uint16_t) CMARK_NODE_TEXT;
+        text->type = (uint16_t)CMARK_NODE_TEXT;
 
         cmark_strbuf buf = CMARK_BUF_INIT(parser->mem);
         cmark_strbuf_puts(&buf, "[^");
@@ -520,7 +524,8 @@ static void process_footnotes(cmark_parser *parser) {
   cmark_iter_free(iter);
 
   if (map->sorted) {
-    qsort(map->sorted, map->size, sizeof(cmark_map_entry *), sort_footnote_by_ix);
+    qsort(map->sorted, map->size, sizeof(cmark_map_entry *),
+          sort_footnote_by_ix);
     for (unsigned int i = 0; i < map->size; ++i) {
       cmark_footnote *footnote = (cmark_footnote *)map->sorted[i];
       if (!footnote->ix) {
@@ -680,7 +685,8 @@ void cmark_parser_feed(cmark_parser *parser, const char *buffer, size_t len) {
   S_parser_feed(parser, (const unsigned char *)buffer, len, false);
 }
 
-void cmark_parser_feed_reentrant(cmark_parser *parser, const char *buffer, size_t len) {
+void cmark_parser_feed_reentrant(cmark_parser *parser, const char *buffer,
+                                 size_t len) {
   cmark_strbuf saved_linebuf;
 
   cmark_strbuf_init(parser->mem, &saved_linebuf, 0);
@@ -904,12 +910,15 @@ static bool parse_block_quote_prefix(cmark_parser *parser, cmark_chunk *input) {
   return res;
 }
 
-static bool parse_footnote_definition_block_prefix(cmark_parser *parser, cmark_chunk *input,
+static bool parse_footnote_definition_block_prefix(cmark_parser *parser,
+                                                   cmark_chunk *input,
                                                    cmark_node *container) {
   if (parser->indent >= 4) {
     S_advance_offset(parser, input, 4, true);
     return true;
-  } else if (input->len > 0 && (input->data[0] == '\n' || (input->data[0] == '\r' && input->data[1] == '\n'))) {
+  } else if (input->len > 0 &&
+             (input->data[0] == '\n' ||
+              (input->data[0] == '\r' && input->data[1] == '\n'))) {
     return true;
   }
 
@@ -922,9 +931,9 @@ static bool parse_node_item_prefix(cmark_parser *parser, cmark_chunk *input,
 
   if (parser->indent >=
       container->as.list.marker_offset + container->as.list.padding) {
-    S_advance_offset(parser, input, container->as.list.marker_offset +
-                                        container->as.list.padding,
-                     true);
+    S_advance_offset(
+        parser, input,
+        container->as.list.marker_offset + container->as.list.padding, true);
     res = true;
   } else if (parser->blank && container->first_child != NULL) {
     // if container->first_child is NULL, then the opening line
@@ -1004,15 +1013,13 @@ static bool parse_html_block_prefix(cmark_parser *parser,
   return res;
 }
 
-static bool parse_extension_block(cmark_parser *parser,
-                                  cmark_node *container,
-                                  cmark_chunk *input)
-{
+static bool parse_extension_block(cmark_parser *parser, cmark_node *container,
+                                  cmark_chunk *input) {
   bool res = false;
 
   if (container->extension->last_block_matches) {
     if (container->extension->last_block_matches(
-        container->extension, parser, input->data, input->len, container))
+            container->extension, parser, input->data, input->len, container))
       res = true;
   }
 
@@ -1070,10 +1077,10 @@ static cmark_node *check_open_blocks(cmark_parser *parser, cmark_chunk *input,
       if (parser->blank)
         goto done;
       break;
-		case CMARK_NODE_FOOTNOTE_DEFINITION:
-			if (!parse_footnote_definition_block_prefix(parser, input, container))
-				goto done;
-			break;
+    case CMARK_NODE_FOOTNOTE_DEFINITION:
+      if (!parse_footnote_definition_block_prefix(parser, input, container))
+        goto done;
+      break;
     default:
       break;
     }
@@ -1154,7 +1161,8 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
                              parser->first_nonspace + 1);
       (*container)->as.code.fenced = true;
       (*container)->as.code.fence_char = peek_at(input, parser->first_nonspace);
-      (*container)->as.code.fence_length = (matched > 255) ? 255 : (uint8_t)matched;
+      (*container)->as.code.fence_length =
+          (matched > 255) ? 255 : (uint8_t)matched;
       (*container)->as.code.fence_offset =
           (int8_t)(parser->first_nonspace - parser->offset);
       (*container)->as.code.info = cmark_chunk_literal("");
@@ -1187,29 +1195,34 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
       }
     } else if (!indented &&
                !(cont_type == CMARK_NODE_PARAGRAPH && !all_matched) &&
-	       (parser->thematic_break_kill_pos <= parser->first_nonspace) &&
-               (matched = S_scan_thematic_break(parser, input, parser->first_nonspace))) {
+               (parser->thematic_break_kill_pos <= parser->first_nonspace) &&
+               (matched = S_scan_thematic_break(parser, input,
+                                                parser->first_nonspace))) {
       // it's only now that we know the line is not part of a setext heading:
       *container = add_child(parser, *container, CMARK_NODE_THEMATIC_BREAK,
                              parser->first_nonspace + 1);
       S_advance_offset(parser, input, input->len - 1 - parser->offset, false);
-    } else if (!indented &&
-               parser->options & CMARK_OPT_FOOTNOTES &&
-               (matched = scan_footnote_definition(input, parser->first_nonspace))) {
-      cmark_chunk c = cmark_chunk_dup(input, parser->first_nonspace + 2, matched - 2);
+    } else if (!indented && parser->options & CMARK_OPT_FOOTNOTES &&
+               (matched =
+                    scan_footnote_definition(input, parser->first_nonspace))) {
+      cmark_chunk c =
+          cmark_chunk_dup(input, parser->first_nonspace + 2, matched - 2);
       cmark_chunk_to_cstr(parser->mem, &c);
 
       while (c.data[c.len - 1] != ']')
         --c.len;
       --c.len;
 
-      S_advance_offset(parser, input, parser->first_nonspace + matched - parser->offset, false);
-      *container = add_child(parser, *container, CMARK_NODE_FOOTNOTE_DEFINITION, parser->first_nonspace + matched + 1);
+      S_advance_offset(parser, input,
+                       parser->first_nonspace + matched - parser->offset,
+                       false);
+      *container = add_child(parser, *container, CMARK_NODE_FOOTNOTE_DEFINITION,
+                             parser->first_nonspace + matched + 1);
       (*container)->as.literal = c;
 
       (*container)->internal_offset = matched;
     } else if ((!indented || cont_type == CMARK_NODE_LIST) &&
-	       parser->indent < 4 &&
+               parser->indent < 4 &&
                (matched = parse_list_marker(
                     parser->mem, input, parser->first_nonspace,
                     (*container)->type == CMARK_NODE_PARAGRAPH, &data))) {
@@ -1279,8 +1292,8 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
       cmark_llist *tmp;
       cmark_node *new_container = NULL;
 
-      for (tmp = parser->syntax_extensions; tmp; tmp=tmp->next) {
-        cmark_syntax_extension *ext = (cmark_syntax_extension *) tmp->data;
+      for (tmp = parser->syntax_extensions; tmp; tmp = tmp->next) {
+        cmark_syntax_extension *ext = (cmark_syntax_extension *)tmp->data;
 
         if (ext->try_opening_block) {
           new_container = ext->try_opening_block(
@@ -1457,8 +1470,7 @@ static void S_process_line(cmark_parser *parser, const unsigned char *buffer,
   input.alloc = 0;
 
   // Skip UTF-8 BOM.
-  if (parser->line_number == 0 &&
-      input.len >= 3 &&
+  if (parser->line_number == 0 && input.len >= 3 &&
       memcmp(input.data, "\xef\xbb\xbf", 3) == 0)
     parser->offset += 3;
 
@@ -1477,7 +1489,7 @@ static void S_process_line(cmark_parser *parser, const unsigned char *buffer,
 
   /* parser->current might have changed if feed_reentrant was called */
   if (current == parser->current)
-  add_text_to_container(parser, container, last_matched_container, &input);
+    add_text_to_container(parser, container, last_matched_container, &input);
 
 finished:
   parser->last_line_length = input.len;
@@ -1517,8 +1529,9 @@ cmark_node *cmark_parser_finish(cmark_parser *parser) {
   }
 #endif
 
-  for (extensions = parser->syntax_extensions; extensions; extensions = extensions->next) {
-    cmark_syntax_extension *ext = (cmark_syntax_extension *) extensions->data;
+  for (extensions = parser->syntax_extensions; extensions;
+       extensions = extensions->next) {
+    cmark_syntax_extension *ext = (cmark_syntax_extension *)extensions->data;
     if (ext->postprocess_func) {
       cmark_node *processed = ext->postprocess_func(ext, parser, parser->root);
       if (processed)
@@ -1554,13 +1567,9 @@ int cmark_parser_get_first_nonspace_column(cmark_parser *parser) {
   return parser->first_nonspace_column;
 }
 
-int cmark_parser_get_indent(cmark_parser *parser) {
-  return parser->indent;
-}
+int cmark_parser_get_indent(cmark_parser *parser) { return parser->indent; }
 
-int cmark_parser_is_blank(cmark_parser *parser) {
-  return parser->blank;
-}
+int cmark_parser_is_blank(cmark_parser *parser) { return parser->blank; }
 
 int cmark_parser_has_partially_consumed_tab(cmark_parser *parser) {
   return parser->partially_consumed_tab;
@@ -1570,17 +1579,14 @@ int cmark_parser_get_last_line_length(cmark_parser *parser) {
   return parser->last_line_length;
 }
 
-cmark_node *cmark_parser_add_child(cmark_parser *parser,
-                                   cmark_node   *parent,
+cmark_node *cmark_parser_add_child(cmark_parser *parser, cmark_node *parent,
                                    cmark_node_type block_type,
                                    int start_column) {
   return add_child(parser, parent, block_type, start_column);
 }
 
-void cmark_parser_advance_offset(cmark_parser *parser,
-                                 const char *input,
-                                 int count,
-                                 int columns) {
+void cmark_parser_advance_offset(cmark_parser *parser, const char *input,
+                                 int count, int columns) {
   cmark_chunk input_chunk = cmark_chunk_literal(input);
 
   S_advance_offset(parser, &input_chunk, count, columns != 0);

@@ -1,8 +1,8 @@
-#include "cmark-gfm.h"
-#include "parser.h"
 #include "references.h"
-#include "inlines.h"
 #include "chunk.h"
+#include "cmark-gfm.h"
+#include "inlines.h"
+#include "parser.h"
 
 static void reference_free(cmark_map *map, cmark_map_entry *_ref) {
   cmark_reference *ref = (cmark_reference *)_ref;
