@@ -133,6 +133,10 @@ static int S_render_node(cmark_node *node, cmark_event_type ev_type,
       escape_xml(xml, node->as.link.title.data, node->as.link.title.len);
       cmark_strbuf_putc(xml, '"');
       break;
+    case CMARK_NODE_SPAN:
+      cmark_strbuf_puts(xml, " ");
+      escape_xml(xml, node->as.span.data.data, node->as.span.data.len);
+      break;
     default:
       break;
     }

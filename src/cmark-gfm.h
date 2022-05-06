@@ -66,6 +66,7 @@ typedef enum {
   CMARK_NODE_LINK = CMARK_NODE_TYPE_INLINE | 0x0009,
   CMARK_NODE_IMAGE = CMARK_NODE_TYPE_INLINE | 0x000a,
   CMARK_NODE_FOOTNOTE_REFERENCE = CMARK_NODE_TYPE_INLINE | 0x000b,
+  CMARK_NODE_SPAN = CMARK_NODE_TYPE_INLINE | 0x000c,
 } cmark_node_type;
 
 extern cmark_node_type CMARK_NODE_LAST_BLOCK;
@@ -762,6 +763,7 @@ char *cmark_render_latex_with_mem(cmark_node *root, int options, int width,
  */
 #define CMARK_OPT_FULL_INFO_STRING (1 << 16)
 
+#define CMARK_OPT_SPAN (1 << 17)
 /**
  * ## Version information
  */

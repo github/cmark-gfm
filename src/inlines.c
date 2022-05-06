@@ -1165,6 +1165,31 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
   }
 
 noMatch:
+  // pandoc style attributes parse
+  /* if (parser->options & CMARK_OPT_SPAN && peek_char(subj) == '{') { */
+  if (peek_char(subj) == '{') {
+    n = scan_span_attrs(&subj->input, subj->pos + 1);
+    if (peek_at(subj, subj->pos + n + 1) == '}') {
+      cmark_node *span = make_simple(subj->mem, CMARK_NODE_SPAN);
+      span->start_line = span->end_line = subj->line;
+      span->start_column = opener->inl_text->start_column;
+      span->as.span.data = cmark_chunk_dup(&subj->input, subj->pos + 1, n);
+      subj->pos += n + 2;
+      span->end_column = subj->pos + subj->column_offset + subj->block_offset;
+      cmark_node_insert_before(opener->inl_text, span);
+      tmp = opener->inl_text->next;
+      while (tmp) {
+        tmpnext = tmp->next;
+        cmark_node_append_child(span, tmp);
+        tmp = tmpnext;
+      }
+      cmark_node_free(opener->inl_text);
+      process_emphasis(parser, subj, opener->previous_delimiter);
+      pop_bracket(subj);
+      return NULL;
+    }
+  }
+
   // If we fall through to here, it means we didn't match a link.
   // What if we're a footnote link?
   if (parser->options & CMARK_OPT_FOOTNOTES && opener->inl_text->next &&
@@ -1186,8 +1211,9 @@ noMatch:
 
       cmark_node *fnref = make_simple(subj->mem, CMARK_NODE_FOOTNOTE_REFERENCE);
 
-      // the start and end of the footnote ref is the opening and closing brace
-      // i.e. the subject's current position, and the opener's start_column
+      // the start and end of the footnote ref is the opening and closing
+      // brace i.e. the subject's current position, and the opener's
+      // start_column
       int fnref_end_column =
           subj->pos + subj->column_offset + subj->block_offset;
       int fnref_start_column = opener->inl_text->start_column;
@@ -1215,19 +1241,20 @@ noMatch:
       fnref->end_column = fnref_end_column;
 
       // we then replace the opener with this new fnref node, the net effect
-      // being replacing the opening '[' text node with a `^footnote-ref]` node.
+      // being replacing the opening '[' text node with a `^footnote-ref]`
+      // node.
       cmark_node_insert_before(opener->inl_text, fnref);
 
       process_emphasis(parser, subj, opener->previous_delimiter);
-      // sometimes, the footnote reference text gets parsed into multiple nodes
-      // i.e. '[^example]' parsed into '[', '^exam', 'ple]'.
-      // this happens for ex with the autolink extension. when the autolinker
-      // finds the 'w' character, it will split the text into multiple nodes
-      // in hopes of being able to match a 'www.' substring.
+      // sometimes, the footnote reference text gets parsed into multiple
+      // nodes i.e. '[^example]' parsed into '[', '^exam', 'ple]'. this
+      // happens for ex with the autolink extension. when the autolinker finds
+      // the 'w' character, it will split the text into multiple nodes in
+      // hopes of being able to match a 'www.' substring.
       //
       // because this function is called one character at a time via the
-      // `parse_inlines` function, and the current subj->pos is pointing at the
-      // closing ] brace, and because we copy all the text between the [ ]
+      // `parse_inlines` function, and the current subj->pos is pointing at
+      // the closing ] brace, and because we copy all the text between the [ ]
       // braces, we should be able to safely ignore and delete any nodes after
       // the opener->inl_text->next.
       //

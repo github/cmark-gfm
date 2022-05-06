@@ -324,3 +324,26 @@ bufsize_t _scan_footnote_definition(const unsigned char *p)
   * { return 0; }
 */
 }
+
+// Scan span attrs.
+bufsize_t _scan_span_attrs(const unsigned char *p)
+{
+  const unsigned char *marker = NULL;
+  const unsigned char *start = p;
+/*!re2c
+  h	= [0-9a-f];
+  nonascii = [^\x00-\x7F]; // https://stackoverflow.com/a/2124144/13206417
+  unicode	= '\\' h {1,6} ('\r\n'|[ \t\r\n\f])?;
+  escape = unicode | ('\\' [^\r\n\f0-9a-f\000]);
+  nmchar = [_a-z0-9-] | nonascii | escape;
+  nmstart = [_a-z-] | nonascii | escape;
+  ident = [a-z] nmchar*;
+  id = '#' nmstart nmchar*;
+  class = '.' ident;
+  keyval = ident '=' nmstart nmchar*;
+  item = id | class | keyval;
+  space = [ \t\r\n];
+  space* item (space+ item)* space* { return (bufsize_t)(p - start); }
+  * { return 0; }
+*/
+}

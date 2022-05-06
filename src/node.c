@@ -14,6 +14,10 @@ bool cmark_node_can_contain_type(cmark_node *node, cmark_node_type child_type) {
     return false;
   }
 
+  if (node->type == CMARK_NODE_SPAN) {
+    return true;
+  }
+
   if (node->extension && node->extension->can_contain_func) {
     return node->extension->can_contain_func(node->extension, node,
                                              child_type) != 0;
@@ -260,6 +264,8 @@ const char *cmark_node_get_type_string(cmark_node *node) {
     return "link";
   case CMARK_NODE_IMAGE:
     return "image";
+  case CMARK_NODE_SPAN:
+    return "span";
   }
 
   return "<unknown>";
