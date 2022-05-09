@@ -1091,10 +1091,7 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
   }
 
   if (!opener->active) {
-    // take delimiter off stack
-    pop_bracket(subj);
-    return make_str(subj, subj->pos - 1, subj->pos - 1,
-                    cmark_chunk_literal("]"));
+    goto noMatch;
   }
 
   // If we got here, we matched a potential link/image text.
