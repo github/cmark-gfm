@@ -28,6 +28,7 @@ set(HEADERS
   plugin.h
   )
 set(LIBRARY_SOURCES
+  wcwidth.c
   cmark.c
   node.c
   iterator.c
