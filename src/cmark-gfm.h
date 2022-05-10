@@ -449,6 +449,15 @@ CMARK_GFM_EXPORT const char *cmark_node_get_title(cmark_node *node);
  */
 CMARK_GFM_EXPORT int cmark_node_set_title(cmark_node *node, const char *title);
 
+/** Returns the attrs of a span 'node', or an empty string if no attrs is set.
+   Returns NULL if called on a node that is not a link or image.
+ */
+CMARK_GFM_EXPORT const char *cmark_node_get_attrs(cmark_node *node);
+
+/** Sets the attrs of a span 'node'. Returns 1 on success, 0 on failure.
+ */
+CMARK_GFM_EXPORT int cmark_node_set_attrs(cmark_node *node, const char *attrs);
+
 /** Returns the literal "on enter" text for a custom 'node', or
     an empty string if no on_enter is set.  Returns NULL if called
     on a non-custom node.

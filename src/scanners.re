@@ -343,7 +343,7 @@ bufsize_t _scan_span_attrs(const unsigned char *p)
   keyval = ident '=' nmstart nmchar*;
   item = id | class | keyval;
   space = [ \t\r\n];
-  space* item (space+ item)* space* { return (bufsize_t)(p - start); }
+  space* item (space+ item)* { return (bufsize_t)(p - start); }
   * { return 0; }
 */
 }

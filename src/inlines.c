@@ -1168,13 +1168,16 @@ noMatch:
   // pandoc style attributes parse
   /* if (parser->options & CMARK_OPT_SPAN && peek_char(subj) == '{') { */
   if (peek_char(subj) == '{') {
-    n = scan_span_attrs(&subj->input, subj->pos + 1);
-    if (peek_at(subj, subj->pos + n + 1) == '}') {
+    int sps1 = scan_spacechars(&subj->input, subj->pos + 1);
+    n = scan_span_attrs(&subj->input, subj->pos + sps1 + 1);
+    sps = scan_spacechars(&subj->input, subj->pos + 1 + sps1 + n);
+    if (peek_at(subj, subj->pos + n + sps1 + sps + 1) == '}') {
       cmark_node *span = make_simple(subj->mem, CMARK_NODE_SPAN);
       span->start_line = span->end_line = subj->line;
       span->start_column = opener->inl_text->start_column;
-      span->as.span.data = cmark_chunk_dup(&subj->input, subj->pos + 1, n);
-      subj->pos += n + 2;
+      span->as.span.data =
+          cmark_chunk_dup(&subj->input, subj->pos + sps1 + 1, n);
+      subj->pos += sps1 + n + sps + 2;
       span->end_column = subj->pos + subj->column_offset + subj->block_offset;
       cmark_node_insert_before(opener->inl_text, span);
       tmp = opener->inl_text->next;

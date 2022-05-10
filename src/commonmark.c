@@ -176,7 +176,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   bool extra_spaces;
   int i;
   bool entering = (ev_type == CMARK_EVENT_ENTER);
-  const char *info, *code, *title;
+  const char *info, *code, *title, *attr;
   char fencechar[2] = {'\0', '\0'};
   size_t info_len, code_len;
   char listmarker[LISTMARKER_SIZE];
@@ -510,6 +510,19 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
       cmark_strbuf_puts(renderer->prefix, "    ");
     } else {
       cmark_strbuf_truncate(renderer->prefix, renderer->prefix->size - 4);
+    }
+    break;
+
+  case CMARK_NODE_SPAN:
+    if (entering) {
+      LIT("[");
+    } else {
+      LIT("]{");
+      OUT(" ", allow_wrap, LITERAL);
+      attr = cmark_node_get_attrs(node);
+      OUT(attr, allow_wrap, LITERAL);
+      OUT(" ", allow_wrap, LITERAL);
+      LIT("}");
     }
     break;
 
