@@ -168,6 +168,15 @@ static cmark_node *get_containing_block(cmark_node *node) {
   return NULL;
 }
 
+static int S_digits_in_int(int number) {
+  int digits = 0;
+  while (number != 0) {
+    number /= 10;
+    digits++;
+  }
+  return digits;
+}
+
 static int S_render_node(cmark_renderer *renderer, cmark_node *node,
                          cmark_event_type ev_type, int options) {
   cmark_node *tmp;
@@ -235,7 +244,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
 
   case CMARK_NODE_ITEM:
     if (cmark_node_get_list_type(node->parent) == CMARK_BULLET_LIST) {
-      marker_width = 4;
+      marker_width = 2;
     } else {
       list_number = cmark_node_get_list_start(node->parent);
       list_delim = cmark_node_get_list_delim(node->parent);
@@ -244,17 +253,26 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
         tmp = tmp->prev;
         list_number += 1;
       }
+      tmp = node;
+      int total = list_number;
+      while (tmp->next) {
+        tmp = tmp->next;
+        total += 1;
+      }
+
+      total = S_digits_in_int(total) + 2;
+
       // we ensure a width of at least 4 so
       // we get nice transition from single digits
       // to double
-      snprintf(listmarker, LISTMARKER_SIZE, "%d%s%s", list_number,
+      snprintf(listmarker, LISTMARKER_SIZE, "%d%s%*s", list_number,
                list_delim == CMARK_PAREN_DELIM ? ")" : ".",
-               list_number < 10 ? "  " : " ");
+               total - (S_digits_in_int(list_number) + 1), " ");
       marker_width = (bufsize_t)strlen(listmarker);
     }
     if (entering) {
       if (cmark_node_get_list_type(node->parent) == CMARK_BULLET_LIST) {
-        LIT("  - ");
+        LIT("- ");
         renderer->begin_content = true;
       } else {
         LIT(listmarker);
