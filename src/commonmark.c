@@ -7,6 +7,7 @@
 #include "buffer.h"
 #include "cmark-gfm.h"
 #include "config.h"
+#include "map.h"
 #include "node.h"
 #include "render.h"
 #include "scanners.h"
@@ -518,10 +519,12 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
       LIT("[");
     } else {
       LIT("]{");
-      OUT(" ", allow_wrap, LITERAL);
       attr = cmark_node_get_attrs(node);
-      OUT(attr, allow_wrap, LITERAL);
-      OUT(" ", allow_wrap, LITERAL);
+      if (attr) {
+        OUT(" ", allow_wrap, LITERAL);
+        OUT(attr, allow_wrap, LITERAL);
+        OUT(" ", allow_wrap, LITERAL);
+      }
       LIT("}");
     }
     break;

@@ -97,7 +97,6 @@ static void S_out(cmark_renderer *renderer, cmark_node *node,
           renderer->last_breakable = last_nonspace;
         }
       }
-
     } else if (escape == LITERAL) {
       if (c == 10) {
         cmark_strbuf_putc(renderer->buffer, '\n');
@@ -132,7 +131,11 @@ static void S_out(cmark_renderer *renderer, cmark_node *node,
                            (char *)renderer->buffer->ptr +
                                renderer->last_breakable + 1);
       // truncate at last_breakable
-      cmark_strbuf_truncate(renderer->buffer, renderer->last_breakable);
+      if (*(renderer->buffer->ptr + renderer->last_breakable) == ' ') {
+        cmark_strbuf_truncate(renderer->buffer, renderer->last_breakable);
+      } else {
+        cmark_strbuf_truncate(renderer->buffer, renderer->last_breakable + 1);
+      }
       // add newline, prefix, and remainder
       cmark_strbuf_putc(renderer->buffer, '\n');
       cmark_strbuf_put(renderer->buffer, renderer->prefix->ptr,
@@ -156,10 +159,56 @@ void cmark_render_ascii(cmark_renderer *renderer, const char *s) {
   renderer->column += renderer->buffer->size - origsize;
 }
 
+bool S_allow_in_start_of_line(uint32_t c) {
+  static const uint32_t data[] = {
+      33,    34,    37,    39,    41,    44,    46,    58,    59,    63,
+      93,    125,   162,   176,   183,   187,   8208,  8211,  8212,  8224,
+      8225,  8226,  8250,  8252,  8263,  8264,  8265,  8451,  8758,  12289,
+      12290, 12291, 12293, 12294, 12297, 12299, 12301, 12303, 12305, 12309,
+      12311, 12313, 12316, 12318, 12319, 12347, 12353, 12355, 12357, 12359,
+      12361, 12387, 12419, 12421, 12423, 12430, 12437, 12438, 12448, 12449,
+      12451, 12453, 12455, 12457, 12483, 12515, 12517, 12519, 12526, 12533,
+      12534, 12539, 12540, 12541, 12542, 12784, 12785, 12786, 12787, 12788,
+      12789, 12790, 12791, 12792, 12793, 12794, 12795, 12796, 12797, 12798,
+      12799, 65072, 65073, 65074, 65075, 65078, 65080, 65082, 65084, 65086,
+      65088, 65090, 65104, 65105, 65106, 65108, 65109, 65110, 65111, 65112,
+      65114, 65116, 65281, 65282, 65285, 65287, 65289, 65292, 65294, 65306,
+      65307, 65311, 65341, 65372, 65373, 65374, 65376, 65380,
+  };
+  for (size_t i = 0; i < sizeof(data) / sizeof(data[0]); i++) {
+    if (data[i] == c) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool S_allow_in_end_of_line(uint32_t c) {
+  static const uint32_t data[] = {
+      34,    35,    36,    39,    40,    91,    92,    123,   163,   165,
+      171,   183,   8245,  12293, 12295, 12296, 12297, 12298, 12299, 12300,
+      12301, 12302, 12304, 12308, 12310, 12312, 12317, 65076, 65077, 65079,
+      65081, 65083, 65085, 65087, 65089, 65091, 65103, 65113, 65115, 65284,
+      65288, 65294, 65339, 65371, 65375, 65376, 65505, 65509, 65510,
+  };
+  for (size_t i = 0; i < sizeof(data) / sizeof(data[0]); i++) {
+    if (data[i] == c) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void cmark_render_code_point(cmark_renderer *renderer, uint32_t c) {
-  cmark_utf8proc_encode_char(c, renderer->buffer);
   extern int wcwidth(wchar_t);
-  renderer->column += wcwidth(c);
+  int width = wcwidth(c);
+  renderer->column += width;
+  if (width == 2 && renderer->last_is_breakable &&
+      S_allow_in_start_of_line(c)) {
+    renderer->last_breakable = renderer->buffer->size - 1;
+  }
+  renderer->last_is_breakable = S_allow_in_end_of_line(c);
+  cmark_utf8proc_encode_char(c, renderer->buffer);
 }
 
 char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
@@ -175,9 +224,9 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
   char *result;
   cmark_iter *iter = cmark_iter_new(root);
 
-  cmark_renderer renderer = {mem,  &buf,        &pref, 0,     width, 0,
-                             0,    true,        true,  false, false, outc,
-                             S_cr, S_blankline, S_out, 0};
+  cmark_renderer renderer = {mem,  &buf, &pref,       0,     width, 0,
+                             0,    true, true,        false, false, false,
+                             outc, S_cr, S_blankline, S_out, 0};
 
   while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
     cur = cmark_iter_get_node(iter);

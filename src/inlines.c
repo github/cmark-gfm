@@ -1323,6 +1323,27 @@ match:
   return NULL;
 }
 
+static bool S_between_CJK(subject *subj, bufsize_t pos, bufsize_t after) {
+  int32_t c = 0;
+  while (pos > -1 && cmark_utf8proc_iterate(subj->input.data + pos,
+                                            subj->input.len - pos, &c) < 0) {
+    pos--;
+  }
+  if (pos == -1) {
+    return false;
+  }
+  extern int wcwidth(wchar_t);
+  if (wcwidth(c) == 2) {
+    if (cmark_utf8proc_iterate(subj->input.data + after,
+                               subj->input.len - after, &c) > -1) {
+      if (wcwidth(c) == 2) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Parse a hard or soft linebreak, returning an inline.
 // Assumes the subject has a cr or newline at the current position.
 static cmark_node *handle_newline(subject *subj) {
@@ -1338,9 +1359,12 @@ static cmark_node *handle_newline(subject *subj) {
   subj->column_offset = -subj->pos;
   // skip spaces at beginning of line
   skip_spaces(subj);
+  bufsize_t after = subj->pos;
   if (nlpos > 1 && peek_at(subj, nlpos - 1) == ' ' &&
       peek_at(subj, nlpos - 2) == ' ') {
     return make_linebreak(subj->mem);
+  } else if (S_between_CJK(subj, nlpos - 1, after)) {
+    return NULL;
   } else {
     return make_softbreak(subj->mem);
   }
