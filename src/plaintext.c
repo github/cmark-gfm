@@ -236,5 +236,5 @@ char *cmark_render_plaintext_with_mem(cmark_node *root, int options, int width,
     // a different meaning with OPT_HARDBREAKS
     width = 0;
   }
-  return cmark_render(mem, root, options, width, outc, S_render_node);
+  return cmark_render(mem, root, options, width, outc, S_render_node, NULL);
 }

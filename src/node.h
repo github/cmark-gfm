@@ -41,6 +41,7 @@ typedef struct {
 typedef struct {
   cmark_chunk url;
   cmark_chunk title;
+  cmark_chunk lab;
 } cmark_link;
 
 typedef struct {

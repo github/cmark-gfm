@@ -31,6 +31,8 @@ struct cmark_renderer {
   void (*out)(struct cmark_renderer *, cmark_node *, const char *, bool,
               cmark_escaping);
   unsigned int footnote_ix;
+  cmark_node* root;
+  void *data;
 };
 
 typedef struct cmark_renderer cmark_renderer;
@@ -55,7 +57,8 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
                                 int32_t, unsigned char),
                    int (*render_node)(cmark_renderer *renderer,
                                       cmark_node *node,
-                                      cmark_event_type ev_type, int options));
+                                      cmark_event_type ev_type, int options),
+                   void *data);
 
 #ifdef __cplusplus
 }

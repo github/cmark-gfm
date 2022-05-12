@@ -216,7 +216,8 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
                                 int32_t, unsigned char),
                    int (*render_node)(cmark_renderer *renderer,
                                       cmark_node *node,
-                                      cmark_event_type ev_type, int options)) {
+                                      cmark_event_type ev_type, int options),
+                   void *data) {
   cmark_strbuf pref = CMARK_BUF_INIT(mem);
   cmark_strbuf buf = CMARK_BUF_INIT(mem);
   cmark_node *cur;
@@ -224,9 +225,9 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
   char *result;
   cmark_iter *iter = cmark_iter_new(root);
 
-  cmark_renderer renderer = {mem,  &buf, &pref,       0,     width, 0,
-                             0,    true, true,        false, false, false,
-                             outc, S_cr, S_blankline, S_out, 0};
+  cmark_renderer renderer = {
+      mem,   &buf,  &pref, 0,    width,       0,     0, true, true, false,
+      false, false, outc,  S_cr, S_blankline, S_out, 0, root, data};
 
   while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
     cur = cmark_iter_get_node(iter);

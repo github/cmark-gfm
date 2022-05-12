@@ -27,21 +27,21 @@ static CMARK_INLINE void cmark_chunk_free(cmark_mem *mem, cmark_chunk *c) {
 }
 
 static CMARK_INLINE void cmark_chunk_ltrim(cmark_chunk *c) {
-  assert(!c->alloc);
 
   while (c->len && cmark_isspace(c->data[0])) {
+    assert(!c->alloc);
     c->data++;
     c->len--;
   }
 }
 
 static CMARK_INLINE void cmark_chunk_rtrim(cmark_chunk *c) {
-  assert(!c->alloc);
 
   while (c->len > 0) {
     if (!cmark_isspace(c->data[c->len - 1]))
       break;
 
+    assert(!c->alloc);
     c->len--;
   }
 }

@@ -275,5 +275,5 @@ char *cmark_render_man(cmark_node *root, int options, int width) {
 
 char *cmark_render_man_with_mem(cmark_node *root, int options, int width,
                                 cmark_mem *mem) {
-  return cmark_render(mem, root, options, width, S_outc, S_render_node);
+  return cmark_render(mem, root, options, width, S_outc, S_render_node, NULL);
 }

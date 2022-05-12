@@ -1074,7 +1074,7 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
   cmark_chunk url, title;
   bracket *opener;
   cmark_node *inl;
-  cmark_chunk raw_label;
+  cmark_chunk raw_label = cmark_chunk_literal("");
   int found_label;
   cmark_node *tmp, *tmpnext;
   bool is_image;
@@ -1136,7 +1136,6 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
 
   // Next, look for a following [link label] that matches in refmap.
   // skip spaces
-  raw_label = cmark_chunk_literal("");
   found_label = link_label(subj, &raw_label);
   if (!found_label) {
     // If we have a shortcut reference link, back up
@@ -1153,7 +1152,7 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
 
   if (found_label) {
     ref = (cmark_reference *)cmark_map_lookup(subj->refmap, &raw_label);
-    cmark_chunk_free(subj->mem, &raw_label);
+    // cmark_chunk_free(subj->mem, &raw_label);
   }
 
   if (ref != NULL) { // found
@@ -1285,6 +1284,7 @@ match:
   inl = make_simple(subj->mem, is_image ? CMARK_NODE_IMAGE : CMARK_NODE_LINK);
   inl->as.link.url = url;
   inl->as.link.title = title;
+  inl->as.link.lab = raw_label;
   inl->start_line = inl->end_line = subj->line;
   inl->start_column = opener->inl_text->start_column;
   inl->end_column = subj->pos + subj->column_offset + subj->block_offset;
@@ -1563,7 +1563,7 @@ static void spnl(subject *subj) {
 // Return 0 if no reference found, otherwise position of subject
 // after reference is parsed.
 bufsize_t cmark_parse_reference_inline(cmark_mem *mem, cmark_chunk *input,
-                                       cmark_map *refmap) {
+                                       cmark_map *refmap, cmark_node *node) {
   subject subj;
 
   cmark_chunk lab;
@@ -1621,7 +1621,7 @@ bufsize_t cmark_parse_reference_inline(cmark_mem *mem, cmark_chunk *input,
     }
   }
   // insert reference into refmap
-  cmark_reference_create(refmap, &lab, &url, &title);
+  cmark_reference_create(refmap, &lab, &url, &title, node);
   return subj.pos;
 }
 

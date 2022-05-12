@@ -9,6 +9,7 @@
 #include "config.h"
 #include "map.h"
 #include "node.h"
+#include "references.h"
 #include "render.h"
 #include "scanners.h"
 #include "syntax_extension.h"
@@ -20,6 +21,12 @@
 #define BLANKLINE() renderer->blankline(renderer)
 #define ENCODED_SIZE 20
 #define LISTMARKER_SIZE 20
+
+typedef struct link {
+  cmark_map_entry entry;
+  cmark_chunk url;
+  cmark_chunk title;
+} link;
 
 // Functions to convert cmark_nodes to commonmark strings.
 
@@ -175,6 +182,28 @@ static int S_digits_in_int(int number) {
     digits++;
   }
   return digits;
+}
+
+static int cmp(const void *p1, const void *p2) {
+  cmark_map_entry *r1 = *(cmark_map_entry **)p1;
+  cmark_map_entry *r2 = *(cmark_map_entry **)p2;
+  return r1->age - r2->age;
+}
+
+static void sort_links(cmark_map *map) {
+  unsigned int i = 0, last = 0, size = map->size;
+  cmark_map_entry *r = map->refs, **sorted = NULL;
+
+  sorted =
+      (cmark_map_entry **)map->mem->calloc(size, sizeof(cmark_map_entry *));
+  while (r) {
+    sorted[i++] = r;
+    r = r->next;
+  }
+
+  qsort(sorted, size, sizeof(cmark_map_entry *), cmp);
+
+  map->sorted = sorted;
 }
 
 static int S_render_node(cmark_renderer *renderer, cmark_node *node,
@@ -467,15 +496,32 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
       if (entering) {
         LIT("[");
       } else {
-        LIT("](");
-        OUT(cmark_node_get_url(node), false, URL);
-        title = cmark_node_get_title(node);
-        if (strlen(title) > 0) {
-          LIT(" \"");
-          OUT(title, false, TITLE);
-          LIT("\"");
+        if (node->as.link.lab.len != 0) {
+          LIT("][");
+          cmark_map *map = (cmark_map *)renderer->data;
+          cmark_map_entry *entry = NULL;
+          if (!(entry = cmark_map_lookup(map, &node->as.link.url))) {
+            map->mem->free(map->sorted);
+            map->sorted = NULL;
+            cmark_reference_create(map, &node->as.link.url, &node->as.link.url,
+                                   &node->as.link.title, NULL);
+            entry = cmark_map_lookup(map, &node->as.link.url);
+          }
+          char tmp[1024];
+          sprintf(tmp, "==link%d==", entry->age + 1);
+          OUT(tmp, false, LITERAL);
+          LIT("]");
+        } else {
+          LIT("](");
+          OUT(cmark_node_get_url(node), false, URL);
+          title = cmark_node_get_title(node);
+          if (strlen(title) > 0) {
+            OUT(" \"", allow_wrap, LITERAL);
+            OUT(title, false, TITLE);
+            LIT("\"");
+          }
+          LIT(")");
         }
-        LIT(")");
       }
     }
     break;
@@ -484,15 +530,32 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     if (entering) {
       LIT("![");
     } else {
-      LIT("](");
-      OUT(cmark_node_get_url(node), false, URL);
-      title = cmark_node_get_title(node);
-      if (strlen(title) > 0) {
-        OUT(" \"", allow_wrap, LITERAL);
-        OUT(title, false, TITLE);
-        LIT("\"");
+      if (node->as.link.lab.len != 0) {
+        LIT("][");
+        cmark_map *map = (cmark_map *)renderer->data;
+        cmark_map_entry *entry = NULL;
+        if (!(entry = cmark_map_lookup(map, &node->as.link.url))) {
+          map->mem->free(map->sorted);
+          map->sorted = NULL;
+          cmark_reference_create(map, &node->as.link.url, &node->as.link.url,
+                                 &node->as.link.title, NULL);
+          entry = cmark_map_lookup(map, &node->as.link.url);
+        }
+        char tmp[1024];
+        sprintf(tmp, "==link%d==", entry->age + 1);
+        OUT(tmp, false, LITERAL);
+        LIT("]");
+      } else {
+        LIT("](");
+        OUT(cmark_node_get_url(node), false, URL);
+        title = cmark_node_get_title(node);
+        if (strlen(title) > 0) {
+          OUT(" \"", allow_wrap, LITERAL);
+          OUT(title, false, TITLE);
+          LIT("\"");
+        }
+        LIT(")");
       }
-      LIT(")");
     }
     break;
 
@@ -552,6 +615,30 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     break;
   }
 
+  if (node == renderer->root && !entering) {
+    cmark_map *map = (cmark_map *)renderer->data;
+    sort_links(map);
+    for (int i = 0; i < map->size; i++) {
+      cmark_map_entry *it = map->sorted[i];
+      char tmp[1024];
+      sprintf(tmp, "[==link%d==]: ", it->age + 1);
+      LIT(tmp);
+
+      const char *url =
+          cmark_chunk_to_cstr(renderer->mem, &((cmark_reference *)it)->url);
+      const char *title =
+          cmark_chunk_to_cstr(renderer->mem, &((cmark_reference *)it)->title);
+
+      OUT(url, false, URL);
+      if (*title != '\0') {
+        LIT(" \"");
+        OUT(title, false, LITERAL);
+        LIT("\"");
+      }
+      LIT("\n");
+    }
+  }
+
   return 1;
 }
 
@@ -567,5 +654,8 @@ char *cmark_render_commonmark_with_mem(cmark_node *root, int options, int width,
     // a different meaning with OPT_HARDBREAKS
     width = 0;
   }
-  return cmark_render(mem, root, options, width, outc, S_render_node);
+  cmark_map *map = cmark_reference_map_new(mem);
+  char *ret = cmark_render(mem, root, options, width, outc, S_render_node, map);
+  cmark_map_free(map);
+  return ret;
 }

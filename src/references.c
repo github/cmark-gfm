@@ -16,7 +16,8 @@ static void reference_free(cmark_map *map, cmark_map_entry *_ref) {
 }
 
 void cmark_reference_create(cmark_map *map, cmark_chunk *label,
-                            cmark_chunk *url, cmark_chunk *title) {
+                            cmark_chunk *url, cmark_chunk *title,
+                            cmark_node *node) {
   cmark_reference *ref;
   unsigned char *reflabel = normalize_map_label(map->mem, label);
 
@@ -32,6 +33,13 @@ void cmark_reference_create(cmark_map *map, cmark_chunk *label,
   ref->title = cmark_clean_title(map->mem, title);
   ref->entry.age = map->size;
   ref->entry.next = map->refs;
+
+  if (node) {
+    ref->start_line = node->start_line;
+    ref->end_line = node->end_line;
+    ref->start_column = node->start_column;
+    ref->end_column = node->end_column;
+  }
 
   map->refs = (cmark_map_entry *)ref;
   map->size++;

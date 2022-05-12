@@ -139,6 +139,7 @@ static void free_node_as(cmark_node *node) {
   case CMARK_NODE_IMAGE:
     cmark_chunk_free(NODE_MEM(node), &node->as.link.url);
     cmark_chunk_free(NODE_MEM(node), &node->as.link.title);
+    cmark_chunk_free(NODE_MEM(node), &node->as.link.lab);
     break;
   case CMARK_NODE_CUSTOM_BLOCK:
   case CMARK_NODE_CUSTOM_INLINE:
