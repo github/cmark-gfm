@@ -6,6 +6,7 @@
 #include "syntax_extension.h"
 #include "utf8.h"
 #include <stdlib.h>
+#include <wchar.h>
 
 static CMARK_INLINE void S_cr(cmark_renderer *renderer) {
   if (renderer->need_cr < 1) {
@@ -157,7 +158,8 @@ void cmark_render_ascii(cmark_renderer *renderer, const char *s) {
 
 void cmark_render_code_point(cmark_renderer *renderer, uint32_t c) {
   cmark_utf8proc_encode_char(c, renderer->buffer);
-  renderer->column += 1;
+  extern int wcwidth(wchar_t);
+  renderer->column += wcwidth(c);
 }
 
 char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
