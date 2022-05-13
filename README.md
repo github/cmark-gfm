@@ -1,94 +1,82 @@
-cmark-gfm
-=========
+# cmark-gfm
 
-![Actions CI](https://github.com/github/cmark-gfm/actions/workflows/ci.yml/badge.svg)
+![Actions CI][==link1==]
 
 `cmark-gfm` is an extended version of the C reference implementation of
-[CommonMark], a rationalized version of Markdown syntax with a spec.  This
-repository adds GitHub Flavored Markdown extensions to
-[the upstream implementation], as defined in [the spec].
+[CommonMark][==link2==], a rationalized version of Markdown syntax with a spec.
+This repository adds GitHub Flavored Markdown extensions to [the upstream
+implementation][==link3==], as defined in [the spec][==link4==].
 
-The rest of the README is preserved as-is from the upstream source.  Note that
-the library and binaries produced by this fork are suffixed with `-gfm` in
-order to distinguish them from the upstream.
+The rest of the README is preserved as-is from the upstream source. Note that
+the library and binaries produced by this fork are suffixed with `-gfm` in order
+to distinguish them from the upstream.
 
----
+-----
 
-It provides a shared library (`libcmark`) with functions for parsing
-CommonMark documents to an abstract syntax tree (AST), manipulating
-the AST, and rendering the document to HTML, groff man, LaTeX,
-CommonMark, or an XML representation of the AST.  It also provides a
-command-line program (`cmark`) for parsing and rendering CommonMark
-documents.
+It provides a shared library (`libcmark`) with functions for parsing CommonMark
+documents to an abstract syntax tree (AST), manipulating the AST, and rendering
+the document to HTML, groff man, LaTeX, CommonMark, or an XML representation of
+the AST. It also provides a command-line program (`cmark`) for parsing and
+rendering CommonMark documents.
 
 Advantages of this library:
 
-- **Portable.**  The library and program are written in standard
-  C99 and have no external dependencies.  They have been tested with
-  MSVC, gcc, tcc, and clang.
+- **Portable.** The library and program are written in standard C99 and have no
+  external dependencies. They have been tested with MSVC, gcc, tcc, and clang.
 
-- **Fast.** cmark can render a Markdown version of *War and Peace* in
-  the blink of an eye (127 milliseconds on a ten year old laptop,
-  vs. 100-400 milliseconds for an eye blink).  In our [benchmarks],
-  cmark is 10,000 times faster than the original `Markdown.pl`, and
-  on par with the very fastest available Markdown processors.
+- **Fast.** cmark can render a Markdown version of *War and Peace* in the blink
+  of an eye (127 milliseconds on a ten year old laptop, vs. 100-400 milliseconds
+  for an eye blink). In our [benchmarks][==link5==], cmark is 10,000 times
+  faster than the original `Markdown.pl`, and on par with the very fastest
+  available Markdown processors.
 
 - **Accurate.** The library passes all CommonMark conformance tests.
 
-- **Standardized.** The library can be expected to parse CommonMark
-  the same way as any other conforming parser.  So, for example,
-  you can use `commonmark.js` on the client to preview content that
-  will be rendered on the server using `cmark`.
+- **Standardized.** The library can be expected to parse CommonMark the same way
+  as any other conforming parser. So, for example, you can use `commonmark.js`
+  on the client to preview content that will be rendered on the server using
+  `cmark`.
 
-- **Robust.** The library has been extensively fuzz-tested using
-  [american fuzzy lop].  The test suite includes pathological cases
-  that bring many other Markdown parsers to a crawl (for example,
-  thousands-deep nested bracketed text or block quotes).
+- **Robust.** The library has been extensively fuzz-tested using [american fuzzy
+  lop][==link6==]. The test suite includes pathological cases that bring many
+  other Markdown parsers to a crawl (for example, thousands-deep nested
+  bracketed text or block quotes).
 
-- **Flexible.** CommonMark input is parsed to an AST which can be
-  manipulated programmatically prior to rendering.
+- **Flexible.** CommonMark input is parsed to an AST which can be manipulated
+  programmatically prior to rendering.
 
-- **Multiple renderers.**  Output in HTML, groff man, LaTeX, CommonMark,
-  and a custom XML format is supported. And it is easy to write new
-  renderers to support other formats.
+- **Multiple renderers.** Output in HTML, groff man, LaTeX, CommonMark, and a
+  custom XML format is supported. And it is easy to write new renderers to
+  support other formats.
 
 - **Free.** BSD2-licensed.
 
-It is easy to use `libcmark` in python, lua, ruby, and other dynamic
-languages: see the `wrappers/` subdirectory for some simple examples.
+It is easy to use `libcmark` in python, lua, ruby, and other dynamic languages:
+see the `wrappers/` subdirectory for some simple examples.
 
-There are also libraries that wrap `libcmark` for
-[Go](https://github.com/rhinoman/go-commonmark),
-[Haskell](https://hackage.haskell.org/package/cmark),
-[Ruby](https://github.com/gjtorikian/commonmarker),
-[Lua](https://github.com/jgm/cmark-lua),
-[Perl](https://metacpan.org/release/CommonMark),
-[Python](https://pypi.python.org/pypi/paka.cmark),
-[R](https://cran.r-project.org/package=commonmark),
-[Tcl](https://github.com/apnadkarni/tcl-cmark),
-[Scala](https://github.com/sparsetech/cmark-scala) and
-[Node.js](https://github.com/killa123/node-cmark).
+There are also libraries that wrap `libcmark` for [Go][==link7==],
+[Haskell][==link8==], [Ruby][==link9==], [Lua][==link10==], [Perl][==link11==],
+[Python][==link12==], [R][==link13==], [Tcl][==link14==], [Scala][==link15==]
+and [Node.js][==link16==].
 
-Installing
-----------
+## Installing
 
-Building the C program (`cmark`) and shared library (`libcmark`)
-requires [cmake].  If you modify `scanners.re`, then you will also
-need [re2c] \(>= 0.14.2\), which is used to generate `scanners.c` from
-`scanners.re`.  We have included a pre-generated `scanners.c` in
-the repository to reduce build dependencies.
+Building the C program (`cmark`) and shared library (`libcmark`) requires
+[cmake][==link17==]. If you modify `scanners.re`, then you will also need
+[re2c][==link18==] (\>= 0.14.2), which is used to generate `scanners.c` from
+`scanners.re`. We have included a pre-generated `scanners.c` in the repository
+to reduce build dependencies.
 
-If you have GNU make, you can simply `make`, `make test`, and `make
-install`.  This calls [cmake] to create a `Makefile` in the `build`
-directory, then uses that `Makefile` to create the executable and
-library.  The binaries can be found in `build/src`.  The default
-installation prefix is `/usr/local`.  To change the installation
-prefix, pass the `INSTALL_PREFIX` variable if you run `make` for the
-first time: `make INSTALL_PREFIX=path`.
+If you have GNU make, you can simply `make`, `make test`, and `make install`.
+This calls [cmake][==link17==] to create a `Makefile` in the `build` directory,
+then uses that `Makefile` to create the executable and library. The binaries can
+be found in `build/src`. The default installation prefix is `/usr/local`. To
+change the installation prefix, pass the `INSTALL_PREFIX` variable if you run
+`make` for the first time: `make INSTALL_PREFIX=path`.
 
-For a more portable method, you can use [cmake] manually. [cmake] knows
-how to create build environments for many build systems.  For example,
-on FreeBSD:
+For a more portable method, you can use [cmake][==link17==] manually.
+[cmake][==link17==] knows how to create build environments for many build
+systems. For example, on FreeBSD:
 
     mkdir build
     cd build
@@ -104,8 +92,8 @@ Or, to create Xcode project files on OSX:
     cmake -G Xcode ..
     open cmark.xcodeproj
 
-The GNU Makefile also provides a few other targets for developers.
-To run a benchmark:
+The GNU Makefile also provides a few other targets for developers. To run a
+benchmark:
 
     make bench
 
@@ -125,14 +113,14 @@ To run a "fuzz test" against ten long randomly generated inputs:
 
     make fuzztest
 
-To do a more systematic fuzz test with [american fuzzy lop]:
+To do a more systematic fuzz test with [american fuzzy lop][==link6==]:
 
     AFL_PATH=/path/to/afl_directory make afl
 
-Fuzzing with [libFuzzer] is also supported but, because libFuzzer is still
-under active development, may not work with your system-installed version of
-clang. Assuming LLVM has been built in `$HOME/src/llvm/build` the fuzzer can be
-run with:
+Fuzzing with [libFuzzer][==link19==] is also supported but, because libFuzzer is
+still under active development, may not work with your system-installed version
+of clang. Assuming LLVM has been built in `$HOME/src/llvm/build` the fuzzer can
+be run with:
 
     CC="$HOME/src/llvm/build/bin/clang" LIB_FUZZER_PATH="$HOME/src/llvm/lib/Fuzzer/libFuzzer.a" make libFuzzer
 
@@ -140,8 +128,7 @@ To make a release tarball and zip archive:
 
     make archive
 
-Installing (Windows)
---------------------
+## Installing (Windows)
 
 To compile with MSVC and NMAKE:
 
@@ -154,53 +141,55 @@ You can cross-compile a Windows binary and dll on linux if you have the
 
 The binaries will be in `build-mingw/windows/bin`.
 
-Usage
------
+## Usage
 
-Instructions for the use of the command line program and library can
-be found in the man pages in the `man` subdirectory.
+Instructions for the use of the command line program and library can be found in
+the man pages in the `man` subdirectory.
 
-Security
---------
+## Security
 
-By default, the library will scrub raw HTML and potentially
-dangerous links (`javascript:`, `vbscript:`, `data:`, `file:`).
+By default, the library will scrub raw HTML and potentially dangerous links
+(`javascript:`, `vbscript:`, `data:`, `file:`).
 
-To allow these, use the option `CMARK_OPT_UNSAFE` (or
-`--unsafe`) with the command line program. If doing so, we
-recommend you use a HTML sanitizer specific to your needs to
-protect against [XSS
-attacks](http://en.wikipedia.org/wiki/Cross-site_scripting).
+To allow these, use the option `CMARK_OPT_UNSAFE` (or `--unsafe`) with the
+command line program. If doing so, we recommend you use a HTML sanitizer
+specific to your needs to protect against [XSS attacks][==link20==].
 
-Contributing
-------------
+## Contributing
 
-There is a [forum for discussing
-CommonMark](http://talk.commonmark.org); you should use it instead of
-github issues for questions and possibly open-ended discussions.
-Use the [github issue tracker](http://github.com/commonmark/CommonMark/issues)
-only for simple, clear, actionable issues.
+There is a [forum for discussing CommonMark][==link21==]; you should use it
+instead of github issues for questions and possibly open-ended discussions. Use
+the [github issue tracker][==link22==] only for simple, clear, actionable
+issues.
 
-Authors
--------
+## Authors
 
-John MacFarlane wrote the original library and program.
-The block parsing algorithm was worked out together with David
-Greenspan. Vicent Marti optimized the C implementation for
-performance, increasing its speed tenfold.  Kārlis Gaņģis helped
-work out a better parsing algorithm for links and emphasis,
-eliminating several worst-case performance issues.
-Nick Wellnhofer contributed many improvements, including
-most of the C library's API and its test harness.
+John MacFarlane wrote the original library and program. The block parsing
+algorithm was worked out together with David Greenspan. Vicent Marti optimized
+the C implementation for performance, increasing its speed tenfold. Kārlis
+Gaņģis helped work out a better parsing algorithm for links and emphasis,
+eliminating several worst-case performance issues. Nick Wellnhofer contributed
+many improvements, including most of the C library's API and its test harness.
 
-[benchmarks]: benchmarks.md
-[the spec]: https://github.github.com/gfm/
-[the upstream implementation]: https://github.com/jgm/cmark
-[CommonMark]: http://commonmark.org
-[cmake]: http://www.cmake.org/download/
-[re2c]: http://re2c.org
-[commonmark.js]: https://github.com/commonmark/commonmark.js
-[Build Status]: https://img.shields.io/travis/github/cmark-gfm/master.svg?style=flat
-[Windows Build Status]: https://ci.appveyor.com/api/projects/status/wv7ifhqhv5itm3d5?svg=true
-[american fuzzy lop]: http://lcamtuf.coredump.cx/afl/
-[libFuzzer]: http://llvm.org/docs/LibFuzzer.html
+[==link1==]: https://github.com/github/cmark-gfm/actions/workflows/ci.yml/badge.svg
+[==link2==]: http://commonmark.org
+[==link3==]: https://github.com/jgm/cmark
+[==link4==]: https://github.github.com/gfm/
+[==link5==]: benchmarks.md
+[==link6==]: http://lcamtuf.coredump.cx/afl/
+[==link7==]: https://github.com/rhinoman/go-commonmark
+[==link8==]: https://hackage.haskell.org/package/cmark
+[==link9==]: https://github.com/gjtorikian/commonmarker
+[==link10==]: https://github.com/jgm/cmark-lua
+[==link11==]: https://metacpan.org/release/CommonMark
+[==link12==]: https://pypi.python.org/pypi/paka.cmark
+[==link13==]: https://cran.r-project.org/package=commonmark
+[==link14==]: https://github.com/apnadkarni/tcl-cmark
+[==link15==]: https://github.com/sparsetech/cmark-scala
+[==link16==]: https://github.com/killa123/node-cmark
+[==link17==]: http://www.cmake.org/download/
+[==link18==]: http://re2c.org
+[==link19==]: http://llvm.org/docs/LibFuzzer.html
+[==link20==]: http://en.wikipedia.org/wiki/Cross-site_scripting
+[==link21==]: http://talk.commonmark.org
+[==link22==]: http://github.com/commonmark/CommonMark/issues

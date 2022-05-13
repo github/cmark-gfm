@@ -1,11 +1,9 @@
 # Benchmarks
 
-Here are some benchmarks, run on an ancient Thinkpad running Intel
-Core 2 Duo at 2GHz.  The input text is a 11MB Markdown file built by
-concatenating the Markdown sources of all the localizations of the
-first edition of
-[*Pro Git*](https://github.com/progit/progit/tree/master/en) by Scott
-Chacon.
+Here are some benchmarks, run on an ancient Thinkpad running Intel Core 2 Duo
+at 2GHz. The input text is a 11MB Markdown file built by concatenating the
+Markdown sources of all the localizations of the first edition of [*Pro
+Git*][==link1==] by Scott Chacon.
 
 |Implementation     |  Time (sec)|
 |-------------------|-----------:|
@@ -24,10 +22,10 @@ Chacon.
 
 To run these benchmarks, use `make bench PROG=/path/to/program`.
 
-`time` is used to measure execution speed.  The reported
-time is the *difference* between the time to run the program
-with the benchmark input and the time to run it with no input.
-(This procedure ensures that implementations in dynamic languages are
-not penalized by startup time.) A median of ten runs is taken.  The
-process is reniced to a high priority so that the system doesn't
-interrupt runs.
+`time` is used to measure execution speed. The reported time is the *difference*
+between the time to run the program with the benchmark input and the time to run
+it with no input. (This procedure ensures that implementations in dynamic
+languages are not penalized by startup time.) A median of ten runs is taken. The
+process is reniced to a high priority so that the system doesn't interrupt runs.
+
+[==link1==]: https://github.com/progit/progit/tree/master/en
