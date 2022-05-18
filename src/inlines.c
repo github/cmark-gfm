@@ -1622,6 +1622,11 @@ bufsize_t cmark_parse_reference_inline(cmark_mem *mem, cmark_chunk *input,
   }
   // insert reference into refmap
   cmark_reference_create(refmap, &lab, &url, &title, node);
+
+  int _;
+  int nls = count_newlines(&subj, 0, subj.pos, &_);
+  node->start_line += nls;
+
   return subj.pos;
 }
 
