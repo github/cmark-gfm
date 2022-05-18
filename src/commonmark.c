@@ -191,7 +191,7 @@ static int cmp(const void *p1, const void *p2) {
 }
 
 static void sort_links(cmark_map *map) {
-  unsigned int i = 0, last = 0, size = map->size;
+  unsigned int i = 0, size = map->size;
   cmark_map_entry *r = map->refs, **sorted = NULL;
 
   sorted =
@@ -215,7 +215,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   bool extra_spaces;
   int i;
   bool entering = (ev_type == CMARK_EVENT_ENTER);
-  const char *info, *code, *title, *attr;
+  const char *info, *code, *attr;
   char fencechar[2] = {'\0', '\0'};
   size_t info_len, code_len;
   char listmarker[LISTMARKER_SIZE];
@@ -610,6 +610,9 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     }
     break;
 
+  case CMARK_NODE_REFERENCE_DEF:
+    break;
+
   default:
     assert(false);
     break;
@@ -618,7 +621,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   if (node == renderer->root && !entering) {
     cmark_map *map = (cmark_map *)renderer->data;
     sort_links(map);
-    for (int i = 0; i < map->size; i++) {
+    for (unsigned int i = 0; i < map->size; i++) {
       cmark_map_entry *it = map->sorted[i];
       char tmp[1024];
       sprintf(tmp, "[==link%d==]: ", it->age + 1);

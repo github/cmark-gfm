@@ -1625,6 +1625,16 @@ bufsize_t cmark_parse_reference_inline(cmark_mem *mem, cmark_chunk *input,
 
   int _;
   int nls = count_newlines(&subj, 0, subj.pos, &_);
+
+  cmark_node *def_node = make_simple(subj.mem, CMARK_NODE_REFERENCE_DEF);
+  def_node->start_line = node->start_line;
+  def_node->start_column = node->start_column;
+  def_node->end_line = node->start_line;
+  def_node->end_column = node->start_column + subj.pos - 1;
+  def_node->as.literal = lab;
+
+  cmark_node_insert_before(node, def_node);
+
   node->start_line += nls;
 
   return subj.pos;
