@@ -122,9 +122,9 @@ static void html_render(cmark_syntax_extension *extension,
     cmark_html_render_sourcepos(node, renderer->html, options);
     cmark_strbuf_putc(renderer->html, '>');
     if (node->as.list.checked) {
-      cmark_strbuf_puts(renderer->html, "<input type=\"checkbox\" checked=\"\" disabled=\"\" /> ");
+      cmark_strbuf_puts(renderer->html, "<input type=\"checkbox\" checked=\"\" disabled=\"\" />");
     } else {
-      cmark_strbuf_puts(renderer->html, "<input type=\"checkbox\" disabled=\"\" /> ");
+      cmark_strbuf_puts(renderer->html, "<input type=\"checkbox\" disabled=\"\" />");
     }
   } else {
     cmark_strbuf_puts(renderer->html, "</li>\n");
