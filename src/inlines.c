@@ -152,8 +152,8 @@ static CMARK_INLINE cmark_node *make_autolink(subject *subj,
   link->as.link.url = cmark_clean_autolink(subj->mem, &url, is_email);
   link->as.link.title = cmark_chunk_literal("");
   link->start_line = link->end_line = subj->line;
-  link->start_column = start_column + 1;
-  link->end_column = end_column + 1;
+  link->start_column = start_column + 1 + subj->column_offset + subj->block_offset;
+  link->end_column = end_column + 1 + subj->column_offset + subj->block_offset;
   cmark_node_append_child(link, make_str_with_entities(subj, start_column + 1, end_column - 1, &url));
   return link;
 }
@@ -1230,8 +1230,9 @@ match:
   inl = make_simple(subj->mem, is_image ? CMARK_NODE_IMAGE : CMARK_NODE_LINK);
   inl->as.link.url = url;
   inl->as.link.title = title;
-  inl->start_line = inl->end_line = subj->line;
+  inl->start_line = opener->inl_text->start_line;
   inl->start_column = opener->inl_text->start_column;
+  inl->end_line = subj->line;
   inl->end_column = subj->pos + subj->column_offset + subj->block_offset;
   cmark_node_insert_before(opener->inl_text, inl);
   // Add link text:

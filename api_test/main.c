@@ -1004,13 +1004,19 @@ static void source_pos(test_batch_runner *runner) {
     ">    Sure.\n"
     ">\n"
     "> 2. Yes, okay.\n"
-    ">    ![ok](hi \"yes\")\n";
+    ">    ![ok](hi \"yes\")\n"
+    "<!-- HTML Comment -->\n"
+    "\n"
+    "what happens if we spread a link [across multiple\n"
+    "lines][anchor]\n"
+    "\n"
+    "[anchor]: http://example.com\n";
 
   cmark_node *doc = cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
   char *xml = cmark_render_xml(doc, CMARK_OPT_DEFAULT | CMARK_OPT_SOURCEPOS);
   STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                       "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
-                      "<document sourcepos=\"1:1-10:20\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                      "<document sourcepos=\"1:1-16:28\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
                       "  <heading sourcepos=\"1:1-1:13\" level=\"1\">\n"
                       "    <text sourcepos=\"1:3-1:5\" xml:space=\"preserve\">Hi </text>\n"
                       "    <emph sourcepos=\"1:6-1:12\">\n"
@@ -1052,6 +1058,16 @@ static void source_pos(test_batch_runner *runner) {
                       "      </item>\n"
                       "    </list>\n"
                       "  </block_quote>\n"
+                      "  <html_block sourcepos=\"11:1-11:21\" xml:space=\"preserve\">&lt;!-- HTML Comment --&gt;\n"
+                      "</html_block>\n"
+                      "  <paragraph sourcepos=\"13:1-14:14\">\n"
+                      "    <text sourcepos=\"13:1-13:33\" xml:space=\"preserve\">what happens if we spread a link </text>\n"
+                      "    <link sourcepos=\"13:34-14:14\" destination=\"http://example.com\" title=\"\">\n"
+                      "      <text sourcepos=\"13:35-13:49\" xml:space=\"preserve\">across multiple</text>\n"
+                      "      <softbreak />\n"
+                      "      <text sourcepos=\"14:1-14:5\" xml:space=\"preserve\">lines</text>\n"
+                      "    </link>\n"
+                      "  </paragraph>\n"
                       "</document>\n",
          "sourcepos are as expected");
   free(xml);
@@ -1062,19 +1078,26 @@ static void source_pos_inlines(test_batch_runner *runner) {
   {
     static const char markdown[] =
       "*first*\n"
-      "second\n";
+      "second\n"
+      "\n"
+      "   <http://example.com>";
 
     cmark_node *doc = cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
     char *xml = cmark_render_xml(doc, CMARK_OPT_DEFAULT | CMARK_OPT_SOURCEPOS);
     STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                         "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
-                        "<document sourcepos=\"1:1-2:6\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "<document sourcepos=\"1:1-4:23\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
                         "  <paragraph sourcepos=\"1:1-2:6\">\n"
                         "    <emph sourcepos=\"1:1-1:7\">\n"
                         "      <text sourcepos=\"1:2-1:6\" xml:space=\"preserve\">first</text>\n"
                         "    </emph>\n"
                         "    <softbreak />\n"
                         "    <text sourcepos=\"2:1-2:6\" xml:space=\"preserve\">second</text>\n"
+                        "  </paragraph>\n"
+                        "  <paragraph sourcepos=\"4:4-4:23\">\n"
+                        "    <link sourcepos=\"4:4-4:23\" destination=\"http://example.com\" title=\"\">\n"
+                        "      <text sourcepos=\"4:5-4:22\" xml:space=\"preserve\">http://example.com</text>\n"
+                        "    </link>\n"
                         "  </paragraph>\n"
                         "</document>\n",
                         "sourcepos are as expected");
