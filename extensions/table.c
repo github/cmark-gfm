@@ -263,7 +263,7 @@ static cmark_node *try_opening_table_header(cmark_syntax_extension *self,
   parent_string = cmark_node_get_string_content(parent_container);
   header_row = row_from_string(self, parser, (unsigned char *)parent_string,
                                (int)strlen(parent_string));
-  if (!header_row || header_row->n_columns != marker_row->n_columns) {
+  if (!header_row || header_row->n_columns > marker_row->n_columns) {
     free_table_row(parser->mem, marker_row);
     free_table_row(parser->mem, header_row);
     cmark_arena_pop();
