@@ -103,6 +103,16 @@ void cmark_strbuf_rtrim(cmark_strbuf *buf);
 CMARK_GFM_EXPORT
 void cmark_strbuf_trim(cmark_strbuf *buf);
 
+/**
+ Removes the characters in the given range.
+
+ @param buf The string buffer.
+ @param start_offset The starting character offset.
+ @param len The length of characters to remove.
+ */
+CMARK_GFM_EXPORT
+void cmark_strbuf_remove(cmark_strbuf *buf, bufsize_t start_offset, bufsize_t len);
+
 CMARK_GFM_EXPORT
 void cmark_strbuf_normalize_whitespace(cmark_strbuf *s);
 

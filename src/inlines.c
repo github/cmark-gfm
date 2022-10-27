@@ -152,8 +152,8 @@ static CMARK_INLINE cmark_node *make_autolink(subject *subj,
   link->as.link.url = cmark_clean_autolink(subj->mem, &url, is_email);
   link->as.link.title = cmark_chunk_literal("");
   link->start_line = link->end_line = subj->line;
-  link->start_column = start_column + 1;
-  link->end_column = end_column + 1;
+  link->start_column = subj->column_offset + subj->block_offset + start_column + 1;
+  link->end_column = subj->column_offset + subj->block_offset + end_column + 1;
   cmark_node_append_child(link, make_str_with_entities(subj, start_column + 1, end_column - 1, &url));
   return link;
 }
@@ -327,10 +327,10 @@ static bufsize_t scan_to_closing_backticks(subject *subj,
 // spaces, then removing a single leading + trailing space,
 // unless the code span consists entirely of space characters.
 static void S_normalize_code(cmark_strbuf *s) {
-  bufsize_t r, w;
+  bufsize_t r, w, last_char_after_nl;
   bool contains_nonspace = false;
 
-  for (r = 0, w = 0; r < s->size; ++r) {
+  for (r = 0, w = 0, last_char_after_nl = 0; r < s->size; ++r) {
     switch (s->ptr[r]) {
     case '\r':
       if (s->ptr[r + 1] != '\n') {
@@ -339,13 +339,44 @@ static void S_normalize_code(cmark_strbuf *s) {
       break;
     case '\n':
       s->ptr[w++] = ' ';
+      last_char_after_nl = w;
+      break;
+    case ' ':
+      s->ptr[w++] = s->ptr[r];
       break;
     default:
+      if (last_char_after_nl) {
+        // Remove leading whitespace.
+        bufsize_t remove_len = r - last_char_after_nl;
+
+        if (remove_len) {
+          cmark_strbuf_remove(s, last_char_after_nl, remove_len);
+          w -= remove_len;
+          r -= remove_len;
+        }
+
+        last_char_after_nl = 0;
+      }
+
       s->ptr[w++] = s->ptr[r];
     }
     if (s->ptr[r] != ' ') {
       contains_nonspace = true;
     }
+  }
+
+  if (last_char_after_nl) {
+    // Remove leading whitespace. Only reach here if the closing backquote
+    // delimiter is on its own line.
+    bufsize_t remove_len = r - last_char_after_nl;
+
+    if (remove_len) {
+      cmark_strbuf_remove(s, last_char_after_nl, remove_len);
+      w -= remove_len;
+      r -= remove_len;
+    }
+
+    last_char_after_nl = 0;
   }
 
   // begins and ends with space?
@@ -363,13 +394,15 @@ static void S_normalize_code(cmark_strbuf *s) {
 // Parse backtick code section or raw backticks, return an inline.
 // Assumes that the subject has a backtick at the current position.
 static cmark_node *handle_backticks(subject *subj, int options) {
+  // Save the current source position in case of need to rewind.
+  bufsize_t subjpos = subj->pos;
   cmark_chunk openticks = take_while(subj, isbacktick);
   bufsize_t startpos = subj->pos;
   bufsize_t endpos = scan_to_closing_backticks(subj, openticks.len);
 
   if (endpos == 0) {      // not found
     subj->pos = startpos; // rewind
-    return make_str(subj, subj->pos, subj->pos, openticks);
+    return make_str(subj, subjpos, subjpos, openticks);
   } else {
     cmark_strbuf buf = CMARK_BUF_INIT(subj->mem);
 
@@ -806,7 +839,17 @@ static cmark_node *handle_backslash(cmark_parser *parser, subject *subj) {
     advance(subj);
     return make_str(subj, subj->pos - 2, subj->pos - 1, cmark_chunk_dup(&subj->input, subj->pos - 1, 1));
   } else if (!is_eof(subj) && skip_line_end(subj)) {
-    return make_linebreak(subj->mem);
+    cmark_node *res = make_linebreak(subj->mem);
+
+    if (parser->options & CMARK_OPT_SOURCEPOS) {
+      res->start_line = subj->line;
+      res->start_column = subj->pos - 1 + subj->column_offset + subj->block_offset;
+      res->end_line = subj->line + 1;
+    }
+    // Adjust the subject source position state.
+    ++subj->line;
+    subj->column_offset = -subj->pos;
+    return res;
   } else {
     return make_str(subj, subj->pos - 1, subj->pos - 1, cmark_chunk_literal("\\"));
   }
@@ -1230,7 +1273,8 @@ match:
   inl = make_simple(subj->mem, is_image ? CMARK_NODE_IMAGE : CMARK_NODE_LINK);
   inl->as.link.url = url;
   inl->as.link.title = title;
-  inl->start_line = inl->end_line = subj->line;
+  inl->start_line = opener->inl_text->start_line;
+  inl->end_line = subj->line;
   inl->start_column = opener->inl_text->start_column;
   inl->end_column = subj->pos + subj->column_offset + subj->block_offset;
   cmark_node_insert_before(opener->inl_text, inl);
@@ -1281,8 +1325,9 @@ match:
 
 // Parse a hard or soft linebreak, returning an inline.
 // Assumes the subject has a cr or newline at the current position.
-static cmark_node *handle_newline(subject *subj) {
+static cmark_node *handle_newline(subject *subj, int options) {
   bufsize_t nlpos = subj->pos;
+  cmark_node *res;
   // skip over cr, crlf, or lf:
   if (peek_at(subj, subj->pos) == '\r') {
     advance(subj);
@@ -1290,16 +1335,20 @@ static cmark_node *handle_newline(subject *subj) {
   if (peek_at(subj, subj->pos) == '\n') {
     advance(subj);
   }
+  res = nlpos > 1 && peek_at(subj, nlpos - 1) == ' ' && peek_at(subj, nlpos - 2) == ' '
+    ? make_linebreak(subj->mem)
+    : make_softbreak(subj->mem);
+  if (options & CMARK_OPT_SOURCEPOS) {
+    res->start_line = subj->line;
+    res->start_column = nlpos + subj->column_offset + subj->block_offset;
+    res->start_column += res->type == CMARK_NODE_LINEBREAK ? -1 : 1;
+    res->end_line = subj->line + 1;
+  }
   ++subj->line;
   subj->column_offset = -subj->pos;
   // skip spaces at beginning of line
   skip_spaces(subj);
-  if (nlpos > 1 && peek_at(subj, nlpos - 1) == ' ' &&
-      peek_at(subj, nlpos - 2) == ' ') {
-    return make_linebreak(subj->mem);
-  } else {
-    return make_softbreak(subj->mem);
-  }
+  return res;
 }
 
 // "\r\n\\`&_*[]<!"
@@ -1382,14 +1431,25 @@ static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent,
   cmark_chunk contents;
   unsigned char c;
   bufsize_t startpos, endpos;
+  int saved_block_offset = subj->block_offset;
+
   c = peek_char(subj);
   if (c == 0) {
     return 0;
   }
+
+  // If NOT the subject's initial line...
+  if (subj->column_offset != 0) {
+    // Reset the block offset. The line's leading trivia was not trimmed,
+    // so the source position will be computed appropriately without the
+    // block offset.
+    subj->block_offset = 0;
+  }
+
   switch (c) {
   case '\r':
   case '\n':
-    new_inl = handle_newline(subj);
+    new_inl = handle_newline(subj, options);
     break;
   case '`':
     new_inl = handle_backticks(subj, options);
@@ -1448,11 +1508,26 @@ static int parse_inline(cmark_parser *parser, subject *subj, cmark_node *parent,
       cmark_chunk_rtrim(&contents);
     }
 
+    // If not the initial line (in the subject) AND at the beginning of another line.
+    if (subj->column_offset != 0 && startpos + subj->column_offset == 0) {
+      // Trim leading whitespace.
+      bufsize_t before_trim = contents.len;
+      cmark_chunk_ltrim(&contents);
+
+      if (contents.len == 0)
+        break; // The contents were only whitespaces.
+
+      // Update the start source position.
+      startpos += before_trim - contents.len;
+    }
+
     new_inl = make_str(subj, startpos, endpos - 1, contents);
   }
   if (new_inl != NULL) {
     cmark_node_append_child(parent, new_inl);
   }
+
+  subj->block_offset = saved_block_offset;
 
   return 1;
 }

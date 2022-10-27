@@ -499,6 +499,23 @@ d | e
 </table>
 ````````````````````````````````
 
+### a table can be recognised when there is a header-like line before
+
+```````````````````````````````` example
+| a |
+| b |
+| --- |
+.
+<p>| a |</p>
+<table>
+<thead>
+<tr>
+<th>b</th>
+</tr>
+</thead>
+</table>
+````````````````````````````````
+
 ## Strikethroughs
 
 A well-formed strikethrough.
