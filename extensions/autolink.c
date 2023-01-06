@@ -273,7 +273,7 @@ static bool validate_protocol(char protocol[], uint8_t *data, int rewind) {
   size_t len = strlen(protocol);
 
   // Check that the protocol matches
-  for (int i = 1; i <= len; i++) {
+  for (size_t i = 1; i <= len; i++) {
     if (data[-rewind - i] != protocol[len - i]) {
       return false;
     }
