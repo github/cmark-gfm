@@ -58,6 +58,7 @@ It is easy to use `libcmark` in python, lua, ruby, and other dynamic
 languages: see the `wrappers/` subdirectory for some simple examples.
 
 There are also libraries that wrap `libcmark` for
+[Crystal](https://github.com/mamantoha/crystal-cmark-gfm)
 [Go](https://github.com/rhinoman/go-commonmark),
 [Haskell](https://hackage.haskell.org/package/cmark),
 [Ruby](https://github.com/gjtorikian/commonmarker),
