@@ -50,6 +50,8 @@ struct cmark_parser {
   cmark_llist *syntax_extensions;
   cmark_llist *inline_syntax_extensions;
   cmark_ispunct_func backslash_ispunct;
+  int8_t SPECIAL_CHARS[256];
+  int8_t SKIP_CHARS[256];
 };
 
 #ifdef __cplusplus

@@ -19,8 +19,8 @@ void cmark_parse_inlines(cmark_parser *parser,
 bufsize_t cmark_parse_reference_inline(cmark_mem *mem, cmark_chunk *input,
                                        cmark_map *refmap);
 
-void cmark_inlines_add_special_character(unsigned char c, bool emphasis);
-void cmark_inlines_remove_special_character(unsigned char c, bool emphasis);
+void cmark_inlines_add_special_character(cmark_parser* parser, unsigned char, bool emphasis);
+void cmark_inlines_remove_special_character(cmark_parser* parser, unsigned char, bool emphasis);
 
 #ifdef __cplusplus
 }
