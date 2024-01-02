@@ -1,6 +1,8 @@
 #ifndef CMARK_SYNTAX_EXTENSION_H
 #define CMARK_SYNTAX_EXTENSION_H
 
+#include <stdbool.h>
+
 #include "cmark-gfm.h"
 #include "cmark-gfm-extension_api.h"
 #include "config.h"
