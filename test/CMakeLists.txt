@@ -3,11 +3,21 @@
 # By default, we run the spec tests only if python3 is available.
 # To require the spec tests, compile with -DSPEC_TESTS=1
 
-if (SPEC_TESTS)
-  find_package(PythonInterp 3 REQUIRED)
-else(SPEC_TESTS)
-  find_package(PythonInterp 3)
-endif(SPEC_TESTS)
+if(SPEC_TESTS)
+  set(PYTHON_REQUIRED REQUIRED)
+else()
+  set(PYTHON_REQUIRED)
+endif()
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.12)
+  find_package(Python3 ${PYTHON_REQUIRED} COMPONENTS Interpreter)
+else()
+  find_package(PythonInterp 3 ${PYTHON_REQUIRED})
+  set(Python3_Interpreter_FOUND ${PYTHONINTERP_FOUND})
+  add_executable(Python3::Interpreter IMPORTED)
+  set_target_properties(Python3::Interpreter PROPERTIES
+    IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+endif()
 
 if (CMARK_SHARED OR CMARK_STATIC)
   add_test(NAME api_test COMMAND api_test)
@@ -24,48 +34,48 @@ else(WIN32)
   set(ROUNDTRIP "${CMAKE_CURRENT_SOURCE_DIR}/roundtrip.sh")
 endif(WIN32)
 
-IF (PYTHONINTERP_FOUND)
+IF (Python3_Interpreter_FOUND)
 
-  add_test(html_normalization
-    ${PYTHON_EXECUTABLE} "-m" "doctest"
+  add_test(NAME html_normalization COMMAND
+    $<TARGET_FILE:Python3::Interpreter> "-m" "doctest"
     "${CMAKE_CURRENT_SOURCE_DIR}/normalize.py"
     )
 
   if (CMARK_SHARED)
-    add_test(spectest_library
-      ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec"
+    add_test(NAME spectest_library COMMAND
+      $<TARGET_FILE:Python3::Interpreter> "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec"
       "${CMAKE_CURRENT_SOURCE_DIR}/spec.txt" "--library-dir" "${CMAKE_CURRENT_BINARY_DIR}/../src"
       )
 
-    add_test(pathological_tests_library
-      ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/pathological_tests.py"
+    add_test(NAME pathological_tests_library COMMAND
+      $<TARGET_FILE:Python3::Interpreter> "${CMAKE_CURRENT_SOURCE_DIR}/pathological_tests.py"
       "--library-dir" "${CMAKE_CURRENT_BINARY_DIR}/../src"
       )
 
-    add_test(roundtriptest_library
-      ${PYTHON_EXECUTABLE}
+    add_test(NAME roundtriptest_library COMMAND
+      $<TARGET_FILE:Python3::Interpreter>
       "${CMAKE_CURRENT_SOURCE_DIR}/roundtrip_tests.py"
       "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/spec.txt"
       "--library-dir" "${CMAKE_CURRENT_BINARY_DIR}/../src"
       )
 
-    add_test(entity_library
-      ${PYTHON_EXECUTABLE}
+    add_test(NAME entity_library COMMAND
+      $<TARGET_FILE:Python3::Interpreter>
       "${CMAKE_CURRENT_SOURCE_DIR}/entity_tests.py"
       "--library-dir" "${CMAKE_CURRENT_BINARY_DIR}/../src"
       )
   endif()
 
-  add_test(spectest_executable
-    ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/spec.txt" "--program" "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm"
+  add_test(NAME spectest_executable COMMAND
+    $<TARGET_FILE:Python3::Interpreter> "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/spec.txt" "--program" "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm"
     )
 
-  add_test(smartpuncttest_executable
-    ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/smart_punct.txt" "--program" "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm --smart"
+  add_test(NAME smartpuncttest_executable COMMAND
+    $<TARGET_FILE:Python3::Interpreter> "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/smart_punct.txt" "--program" "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm --smart"
     )
 
-  add_test(extensions_executable
-    ${PYTHON_EXECUTABLE}
+  add_test(NAME extensions_executable COMMAND
+    $<TARGET_FILE:Python3::Interpreter>
     "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py"
     "--no-normalize"
     "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/extensions.txt"
@@ -73,42 +83,42 @@ IF (PYTHONINTERP_FOUND)
     "--extensions" "table strikethrough autolink tagfilter footnotes tasklist"
     )
 
-  add_test(roundtrip_extensions_executable
-    ${PYTHON_EXECUTABLE}
+  add_test(NAME roundtrip_extensions_executable COMMAND
+    $<TARGET_FILE:Python3::Interpreter>
     "${CMAKE_CURRENT_SOURCE_DIR}/roundtrip_tests.py"
     "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/extensions.txt"
     "--program" "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm"
     "--extensions" "table strikethrough autolink tagfilter footnotes tasklist"
     )
 
-  add_test(option_table_prefer_style_attributes
-    ${PYTHON_EXECUTABLE}
+  add_test(NAME option_table_prefer_style_attributes COMMAND
+    $<TARGET_FILE:Python3::Interpreter>
     "${CMAKE_CURRENT_SOURCE_DIR}/roundtrip_tests.py"
     "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/extensions-table-prefer-style-attributes.txt"
     "--program" "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm --table-prefer-style-attributes"
     "--extensions" "table strikethrough autolink tagfilter footnotes tasklist"
     )
 
-  add_test(option_full_info_string
-    ${PYTHON_EXECUTABLE}
+  add_test(NAME option_full_info_string COMMAND
+    $<TARGET_FILE:Python3::Interpreter>
     "${CMAKE_CURRENT_SOURCE_DIR}/roundtrip_tests.py"
     "--spec" "${CMAKE_CURRENT_SOURCE_DIR}/extensions-full-info-string.txt"
     "--program" "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm --full-info-string"
     )
 
-  add_test(regressiontest_executable
-    ${PYTHON_EXECUTABLE}
+  add_test(NAME regressiontest_executable COMMAND
+    $<TARGET_FILE:Python3::Interpreter>
     "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec"
     "${CMAKE_CURRENT_SOURCE_DIR}/regression.txt" "--program"
     "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm"
     )
 
 
-ELSE(PYTHONINTERP_FOUND)
+ELSE(Python3_Interpreter_FOUND)
 
   message("\n*** A python 3 interpreter is required to run the spec tests.\n")
   add_test(skipping_spectests
     echo "Skipping spec tests, because no python 3 interpreter is available.")
 
-ENDIF(PYTHONINTERP_FOUND)
+ENDIF(Python3_Interpreter_FOUND)
 
