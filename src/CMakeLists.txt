@@ -1,5 +1,3 @@
-include(GNUInstallDirs)
-
 set(LIBRARY "libcmark-gfm")
 set(STATICLIBRARY "libcmark-gfm_static")
 set(HEADERS
