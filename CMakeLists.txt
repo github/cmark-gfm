@@ -29,6 +29,50 @@ option(CMARK_SHARED "Build shared libcmark-gfm library" ON)
 option(CMARK_LIB_FUZZER "Build libFuzzer fuzzing harness" OFF)
 option(CMARK_FUZZ_QUADRATIC "Build quadratic fuzzing harness" OFF)
 
+if(NOT MSVC)
+  set(CMAKE_C_STANDARD 99)
+  set(CMAKE_C_STANDARD_REQUIRED YES)
+  set(CMAKE_C_EXTENSIONS NO)
+endif()
+
+# -fvisibility=hidden
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN TRUE)
+
+# Compiler flags
+if(MSVC)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/W4>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4706>)
+  # Compile as C++ under MSVC older than 12.0
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/TP>)
+  add_compile_definitions($<$<COMPILE_LANGUAGE:C>:_CRT_SECURE_NO_WARNINGS>)
+  # BEGIN cmark-gfm
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4204>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4211>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4100>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/WX>)
+  # END cmark-gfm
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES Clang)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wall>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wextra>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-pedantic>)
+  # BEGIN cmark-gfm
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-unused-parameter>)
+  # END cmark-gfm
+endif()
+
+# Check integrity of node structure when compiled as debug
+add_compile_definitions($<$<CONFIG:Debug>:CMARK_DEBUG_NODES>)
+
+add_compile_options($<$<AND:$<CONFIG:PROFILE>,$<COMPILE_LANGUAGE:C>>:-pg>)
+
+if(CMAKE_BUILD_TYPE STREQUAL Ubsan)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-fsanitize=undefined>)
+endif()
+if(CMARK_LIB_FUZZER)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-fsanitize-coverage=trace-pc-guard>)
+endif()
+
 if(CMARK_FUZZ_QUADRATIC)
   set(FUZZER_FLAGS "-fsanitize=fuzzer-no-link,address -g")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FUZZER_FLAGS}")
