@@ -92,3 +92,12 @@ ELSE(Python3_Interpreter_FOUND)
   message(WARNING "A Python 3 Interpreter is required to run the spec tests")
 
 ENDIF(Python3_Interpreter_FOUND)
+
+if(CMARK_LIB_FUZZER)
+  add_executable(cmark-fuzz cmark-fuzz.c)
+  target_link_libraries(cmark-fuzz PRIVATE
+    libcmark-gfm
+    ${CMAKE_LIB_FUZZER_PATH})
+  set_target_properties(${FUZZ_HARNESS} PROPERTIES
+    LINKER_LANGUAGE CXX)
+endif()

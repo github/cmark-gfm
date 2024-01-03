@@ -1,176 +1,83 @@
-set(LIBRARY "libcmark-gfm")
-set(STATICLIBRARY "libcmark-gfm_static")
-set(HEADERS
-  cmark-gfm.h
-  cmark-gfm-extension_api.h
-  parser.h
-  buffer.h
-  node.h
-  iterator.h
-  chunk.h
-  references.h
-  footnotes.h
-  map.h
-  utf8.h
-  scanners.h
-  inlines.h
-  houdini.h
-  cmark_ctype.h
-  render.h
-  registry.h
-  syntax_extension.h
-  plugin.h
-  )
-set(LIBRARY_SOURCES
-  cmark.c
-  node.c
-  iterator.c
-  blocks.c
-  inlines.c
-  scanners.c
-  scanners.re
-  utf8.c
-  buffer.c
-  references.c
-  footnotes.c
-  map.c
-  render.c
-  man.c
-  xml.c
-  html.c
-  commonmark.c
-  plaintext.c
-  latex.c
-  houdini_href_e.c
-  houdini_html_e.c
-  houdini_html_u.c
-  cmark_ctype.c
-  arena.c
-  linked_list.c
-  syntax_extension.c
-  registry.c
-  plugin.c
-  ${HEADERS}
-  )
 
-set(PROGRAM "cmark-gfm")
-set(PROGRAM_SOURCES main.c)
-
-include_directories(. ${CMAKE_CURRENT_BINARY_DIR})
-include_directories(
-  ${PROJECT_BINARY_DIR}/extensions
-)
+set(PROJECT_VERSION_MAJOR 0)
+set(PROJECT_VERSION_MINOR 29)
+set(PROJECT_VERSION_PATCH 0)
+set(PROJECT_VERSION_GFM 13)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmark-gfm_version.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm_version.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libcmark-gfm.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libcmark-gfm.pc @ONLY)
 
-include (GenerateExportHeader)
-
-include("../CheckFileOffsetBits.cmake")
-CHECK_FILE_OFFSET_BITS()
-
-add_executable(${PROGRAM} ${PROGRAM_SOURCES})
-
-if(CMARK_SHARED)
-  target_link_libraries(${PROGRAM} libcmark-gfm-extensions libcmark-gfm)
-elseif(CMARK_STATIC)
-  target_link_libraries(${PROGRAM} libcmark-gfm-extensions_static libcmark-gfm_static)
-endif()
-
-if (CMARK_SHARED)
-  add_library(${LIBRARY} SHARED ${LIBRARY_SOURCES})
-  # Include minor version and patch level in soname for now.
-  set_target_properties(${LIBRARY} PROPERTIES
-    OUTPUT_NAME "cmark-gfm"
-    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.gfm.${PROJECT_VERSION_GFM}
-    VERSION ${PROJECT_VERSION})
-
-  set_property(TARGET ${LIBRARY}
-    APPEND PROPERTY MACOSX_RPATH true)
-
+add_library(libcmark-gfm
+  arena.c
+  blocks.c
+  buffer.c
+  cmark.c
+  cmark_ctype.c
+  commonmark.c
+  footnotes.c
+  houdini_href_e.c
+  houdini_html_e.c
+  houdini_html_u.c
+  html.c
+  inlines.c
+  iterator.c
+  latex.c
+  linked_list.c
+  man.c
+  map.c
+  node.c
+  plaintext.c
+  plugin.c
+  references.c
+  registry.c
+  render.c
+  scanners.c
+  scanners.re
+  syntax_extension.c
+  utf8.c
+  xml.c)
+target_include_directories(libcmark-gfm PUBLIC
+  $<INSTALL_INTERFACE:include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+target_sources(libcmark-gfm PRIVATE
+  ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm_version.h)
+set_target_properties(libcmark-gfm PROPERTIES
+  DEFINE_SYMBOL cmark-gfm
+  MACOSX_RPATH TRUE
+  OUTPUT_NAME cmark-gfm
   # Avoid name clash between PROGRAM and LIBRARY pdb files.
-  set_target_properties(${LIBRARY} PROPERTIES PDB_NAME cmark-gfm_dll)
+  PDB_NAME libcmark-gfm
+  SOVERSION ${PROJECT_VERSION}
+  VERSION ${PROJECT_VERSION})
+generate_export_header(libcmark-gfm
+  BASE_NAME ${PROJECT_NAME})
 
-  generate_export_header(${LIBRARY}
-    BASE_NAME ${PROJECT_NAME})
-
-  list(APPEND CMARK_INSTALL ${LIBRARY})
+add_executable(cmark-gfm
+  main.c)
+target_link_libraries(cmark-gfm PRIVATE
+  libcmark-gfm
+  libcmark-gfm-extensions)
+if(MSVC)
+  target_link_options(cmark-gfm PRIVATE
+    /INCREMENTAL:NO)
 endif()
 
-if (CMARK_STATIC)
-  add_library(${STATICLIBRARY} STATIC ${LIBRARY_SOURCES})
-  target_compile_definitions(${STATICLIBRARY} PUBLIC
-    CMARK_GFM_STATIC_DEFINE
-    CMARK_GFM_EXTENSIONS_STATIC_DEFINE)
-  set_target_properties(${STATICLIBRARY} PROPERTIES
-    POSITION_INDEPENDENT_CODE ON)
 
-  if (MSVC)
-    set_target_properties(${STATICLIBRARY} PROPERTIES
-      OUTPUT_NAME "cmark-gfm_static"
-      VERSION ${PROJECT_VERSION})
-  else()
-    set_target_properties(${STATICLIBRARY} PROPERTIES
-      OUTPUT_NAME "cmark-gfm"
-      VERSION ${PROJECT_VERSION})
-  endif(MSVC)
-
-  if (NOT CMARK_SHARED)
-    generate_export_header(${STATICLIBRARY}
-      BASE_NAME ${PROJECT_NAME})
-  endif()
-
-  list(APPEND CMARK_INSTALL ${STATICLIBRARY})
-endif()
-
-if (MSVC)
-  set_property(TARGET ${PROGRAM}
-    APPEND PROPERTY LINK_FLAGS /INCREMENTAL:NO)
-endif(MSVC)
-
-set(libdir lib${LIB_SUFFIX})
-
-install(TARGETS ${PROGRAM} ${CMARK_INSTALL}
+install(TARGETS cmark-gfm libcmark-gfm
   EXPORT cmark-gfm
   RUNTIME DESTINATION bin
-  LIBRARY DESTINATION ${libdir}
-  ARCHIVE DESTINATION ${libdir}
-  )
-
-if(CMARK_SHARED OR CMARK_STATIC)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libcmark-gfm.pc.in
-    ${CMAKE_CURRENT_BINARY_DIR}/libcmark-gfm.pc @ONLY)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcmark-gfm.pc
-    DESTINATION ${libdir}/pkgconfig)
-
-  install(FILES
-    cmark-gfm.h
-    cmark-gfm-extension_api.h
-    ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm_export.h
-    ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm_version.h
-    DESTINATION include
-    )
-
-  install(EXPORT cmark-gfm DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-endif()
-
-# Feature tests
-include(CheckCSourceCompiles)
-
-CHECK_C_SOURCE_COMPILES(
-  "int main() { __builtin_expect(0,0); return 0; }"
-  HAVE___BUILTIN_EXPECT)
-
-CONFIGURE_FILE(
-  ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
-if(CMARK_LIB_FUZZER)
-  add_executable(cmark-fuzz ../test/cmark-fuzz.c ${LIBRARY_SOURCES})
-  target_link_libraries(cmark-fuzz "${CMAKE_LIB_FUZZER_PATH}")
-
-  # cmark is written in C but the libFuzzer runtime is written in C++ which
-  # needs to link against the C++ runtime.
-  set_target_properties(${FUZZ_HARNESS} PROPERTIES
-    LINKER_LANGUAGE CXX)
-endif()
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcmark-gfm.pc
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+install(FILES
+  cmark-gfm.h
+  cmark-gfm-extension_api.h
+  ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm_export.h
+  ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm_version.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(EXPORT cmark-gfm
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)

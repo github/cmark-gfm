@@ -4,7 +4,7 @@
 #include "buffer.h"
 #include "node.h"
 
-CMARK_INLINE
+inline
 static void cmark_html_render_cr(cmark_strbuf *html) {
   if (html->size && html->ptr[html->size - 1] != '\n')
     cmark_strbuf_putc(html, '\n');
@@ -12,7 +12,7 @@ static void cmark_html_render_cr(cmark_strbuf *html) {
 
 #define BUFFER_SIZE 100
 
-CMARK_INLINE 
+inline
 static void cmark_html_render_sourcepos(cmark_node *node, cmark_strbuf *html, int options) {
   char buffer[BUFFER_SIZE];
   if (CMARK_OPT_SOURCEPOS & options) {

@@ -1,19 +1,10 @@
 add_executable(api_test
   cplusplus.cpp
   harness.c
-  harness.h
-  main.c
-)
-include_directories(
-  ${PROJECT_SOURCE_DIR}/src
-  ${PROJECT_BINARY_DIR}/src
-  ${PROJECT_BINARY_DIR}/extensions
-)
-if(CMARK_SHARED)
-  target_link_libraries(api_test libcmark-gfm-extensions libcmark-gfm)
-else()
-  target_link_libraries(api_test libcmark-gfm-extensions_static libcmark-gfm_static)
-endif()
+  main.c)
+target_link_libraries(api_test PRIVATE
+  libcmark-gfm
+  libcmark-gfm-extensions)
 
 add_test(NAME api_test COMMAND api_test)
 if(WIN32)

@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
 #include "cmark_ctype.h"
 #include "buffer.h"
 
@@ -31,7 +30,7 @@ void cmark_strbuf_init(cmark_mem *mem, cmark_strbuf *buf,
     cmark_strbuf_grow(buf, initial_size);
 }
 
-static CMARK_INLINE void S_strbuf_grow_by(cmark_strbuf *buf, bufsize_t add) {
+static inline void S_strbuf_grow_by(cmark_strbuf *buf, bufsize_t add) {
   cmark_strbuf_grow(buf, buf->size + add);
 }
 
