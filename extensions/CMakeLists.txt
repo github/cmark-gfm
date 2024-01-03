@@ -61,9 +61,6 @@ if (CMARK_STATIC)
   list(APPEND CMARK_INSTALL ${STATICLIBRARY})
 endif()
 
-set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_NO_WARNINGS ON)
-
-include (InstallRequiredSystemLibraries)
 install(TARGETS ${CMARK_INSTALL}
   EXPORT cmark-gfm-extensions
   RUNTIME DESTINATION bin
