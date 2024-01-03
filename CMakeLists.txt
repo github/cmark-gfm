@@ -39,7 +39,11 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(extensions)
-add_subdirectory(man)
+# TODO(compnerd) should this be enabled for MinGW, which sets CMAKE_SYSTEM_NAME
+# to Windows, but defines `MINGW`.
+if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+  add_subdirectory(man)
+endif()
 if(BUILD_TESTING)
   add_subdirectory(test testdir)
   if(CMARK_STATIC OR CMARK_SHARED)
