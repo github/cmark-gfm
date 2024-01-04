@@ -1,9 +1,10 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "cmark_ctype.h"
-#include "config.h"
 #include "cmark-gfm.h"
 #include "houdini.h"
 #include "scanners.h"

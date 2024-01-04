@@ -1,9 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "config.h"
 #include "cmark-gfm.h"
 #include "node.h"
 #include "buffer.h"
@@ -25,7 +25,7 @@ struct render_state {
   int indent;
 };
 
-static CMARK_INLINE void indent(struct render_state *state) {
+static inline void indent(struct render_state *state) {
   int i;
   for (i = 0; i < state->indent && i < MAX_INDENT; i++) {
     cmark_strbuf_putc(state->xml, ' ');

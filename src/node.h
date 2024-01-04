@@ -5,8 +5,9 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "cmark-gfm.h"
 #include "cmark-gfm-extension_api.h"
@@ -130,24 +131,24 @@ void cmark_register_node_flag(cmark_node_internal_flags *flags);
 CMARK_GFM_EXPORT
 void cmark_init_standard_node_flags(void);
 
-static CMARK_INLINE cmark_mem *cmark_node_mem(cmark_node *node) {
+static inline cmark_mem *cmark_node_mem(cmark_node *node) {
   return node->content.mem;
 }
 CMARK_GFM_EXPORT int cmark_node_check(cmark_node *node, FILE *out);
 
-static CMARK_INLINE bool CMARK_NODE_TYPE_BLOCK_P(cmark_node_type node_type) {
+static inline bool CMARK_NODE_TYPE_BLOCK_P(cmark_node_type node_type) {
 	return (node_type & CMARK_NODE_TYPE_MASK) == CMARK_NODE_TYPE_BLOCK;
 }
 
-static CMARK_INLINE bool CMARK_NODE_BLOCK_P(cmark_node *node) {
+static inline bool CMARK_NODE_BLOCK_P(cmark_node *node) {
 	return node != NULL && CMARK_NODE_TYPE_BLOCK_P((cmark_node_type) node->type);
 }
 
-static CMARK_INLINE bool CMARK_NODE_TYPE_INLINE_P(cmark_node_type node_type) {
+static inline bool CMARK_NODE_TYPE_INLINE_P(cmark_node_type node_type) {
 	return (node_type & CMARK_NODE_TYPE_MASK) == CMARK_NODE_TYPE_INLINE;
 }
 
-static CMARK_INLINE bool CMARK_NODE_INLINE_P(cmark_node *node) {
+static inline bool CMARK_NODE_INLINE_P(cmark_node *node) {
 	return node != NULL && CMARK_NODE_TYPE_INLINE_P((cmark_node_type) node->type);
 }
 

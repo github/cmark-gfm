@@ -1,42 +1,91 @@
 cmake_minimum_required(VERSION 3.0)
-project(cmark-gfm)
 
-set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 29)
-set(PROJECT_VERSION_PATCH 0)
-set(PROJECT_VERSION_GFM 13)
-set(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.gfm.${PROJECT_VERSION_GFM})
+if(POLICY CMP0063)
+  cmake_policy(SET CMP0063 NEW)
+endif()
+if(POLICY CMP0092)
+  cmake_policy(SET CMP0092 NEW)
+endif()
 
-include("FindAsan.cmake")
-include("CheckFileOffsetBits.cmake")
+project(cmark-gfm
+  LANGUAGES C CXX)
+set(PROJECT_VERSION 0.29.0.gfm.13)
 
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message(FATAL_ERROR "Do not build in-source.\nPlease remove CMakeCache.txt and the CMakeFiles/ directory.\nThen: mkdir build ; cd build ; cmake .. ; make")
 endif()
 
-option(CMARK_TESTS "Build cmark-gfm tests and enable testing" ON)
-option(CMARK_STATIC "Build static libcmark-gfm library" ON)
-option(CMARK_SHARED "Build shared libcmark-gfm library" ON)
 option(CMARK_LIB_FUZZER "Build libFuzzer fuzzing harness" OFF)
 option(CMARK_FUZZ_QUADRATIC "Build quadratic fuzzing harness" OFF)
 
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED YES)
+set(CMAKE_C_EXTENSIONS NO)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN TRUE)
+
+if(NOT MSVC OR CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
+  set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_NO_WARNINGS ON)
+  include(InstallRequiredSystemLibraries)
+endif()
+
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
+
+include(CheckFileOffsetBits)
+include(CTest)
+include(FindAsan)
+include(GenerateExportHeader)
+include(GNUInstallDirs)
+
+check_file_offset_bits()
+
+# Compiler flags
+if(MSVC)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/W4>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4706>)
+  add_compile_definitions($<$<COMPILE_LANGUAGE:C>:_CRT_SECURE_NO_WARNINGS>)
+  # BEGIN cmark-gfm
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4204>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4211>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/wd4100>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/WX>)
+  # END cmark-gfm
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES Clang)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wall>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wextra>)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-pedantic>)
+  # BEGIN cmark-gfm
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-unused-parameter>)
+  # END cmark-gfm
+endif()
+
+# Check integrity of node structure when compiled as debug
+add_compile_definitions($<$<CONFIG:Debug>:CMARK_DEBUG_NODES>)
+
+add_compile_options($<$<AND:$<CONFIG:PROFILE>,$<COMPILE_LANGUAGE:C>>:-pg>)
+
+if(CMAKE_BUILD_TYPE STREQUAL Ubsan)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-fsanitize=undefined>)
+endif()
+if(CMARK_LIB_FUZZER)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-fsanitize-coverage=trace-pc-guard>)
+endif()
+
 if(CMARK_FUZZ_QUADRATIC)
-  set(FUZZER_FLAGS "-fsanitize=fuzzer-no-link,address -g")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FUZZER_FLAGS}")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FUZZER_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${FUZZER_FLAGS}")
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${FUZZER_FLAGS}")
+  add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fsanitize=fuzzer-no-link,address>)
 endif()
 
 add_subdirectory(src)
 add_subdirectory(extensions)
-if(CMARK_TESTS AND (CMARK_SHARED OR CMARK_STATIC))
-  add_subdirectory(api_test)
+# TODO(compnerd) should this be enabled for MinGW, which sets CMAKE_SYSTEM_NAME
+# to Windows, but defines `MINGW`.
+if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+  add_subdirectory(man)
 endif()
-add_subdirectory(man)
-if(CMARK_TESTS)
-  enable_testing()
+if(BUILD_TESTING)
   add_subdirectory(test testdir)
+  add_subdirectory(api_test)
 endif()
 if(CMARK_FUZZ_QUADRATIC)
   add_subdirectory(fuzz)

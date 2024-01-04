@@ -5,14 +5,14 @@
  * see http://spec.commonmark.org/0.24/#phase-1-block-structure
  */
 
-#include <stdlib.h>
 #include <assert.h>
-#include <stdio.h>
 #include <limits.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "cmark_ctype.h"
 #include "syntax_extension.h"
-#include "config.h"
 #include "parser.h"
 #include "cmark-gfm.h"
 #include "node.h"
@@ -49,7 +49,7 @@ static bool S_last_line_checked(const cmark_node *node) {
   return (node->flags & CMARK_NODE__LAST_LINE_CHECKED) != 0;
 }
 
-static CMARK_INLINE cmark_node_type S_type(const cmark_node *node) {
+static inline cmark_node_type S_type(const cmark_node *node) {
   return (cmark_node_type)node->type;
 }
 
@@ -64,11 +64,11 @@ static void S_set_last_line_checked(cmark_node *node) {
   node->flags |= CMARK_NODE__LAST_LINE_CHECKED;
 }
 
-static CMARK_INLINE bool S_is_line_end_char(char c) {
+static inline bool S_is_line_end_char(char c) {
   return (c == '\n' || c == '\r');
 }
 
-static CMARK_INLINE bool S_is_space_or_tab(char c) {
+static inline bool S_is_space_or_tab(char c) {
   return (c == ' ' || c == '\t');
 }
 
@@ -189,13 +189,13 @@ static bool is_blank(cmark_strbuf *s, bufsize_t offset) {
   return true;
 }
 
-static CMARK_INLINE bool accepts_lines(cmark_node_type block_type) {
+static inline bool accepts_lines(cmark_node_type block_type) {
   return (block_type == CMARK_NODE_PARAGRAPH ||
           block_type == CMARK_NODE_HEADING ||
           block_type == CMARK_NODE_CODE_BLOCK);
 }
 
-static CMARK_INLINE bool contains_inlines(cmark_node *node) {
+static inline bool contains_inlines(cmark_node *node) {
   if (node->extension && node->extension->contains_inlines_func) {
     return node->extension->contains_inlines_func(node->extension, node) != 0;
   }

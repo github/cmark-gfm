@@ -10,9 +10,8 @@
 
 // Functions to convert cmark_nodes to plain text strings.
 
-static CMARK_INLINE void outc(cmark_renderer *renderer, cmark_node *node, 
-                              cmark_escaping escape,
-                              int32_t c, unsigned char nextc) {
+static inline void outc(cmark_renderer *renderer, cmark_node *node,
+                        cmark_escaping escape, int32_t c, unsigned char nextc) {
   cmark_render_code_point(renderer, c);
 }
 

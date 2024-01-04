@@ -17,7 +17,7 @@ typedef struct cmark_chunk {
   bufsize_t alloc; // also implies a NULL-terminated string
 } cmark_chunk;
 
-static CMARK_INLINE void cmark_chunk_free(cmark_mem *mem, cmark_chunk *c) {
+static inline void cmark_chunk_free(cmark_mem *mem, cmark_chunk *c) {
   if (c->alloc)
     mem->free(c->data);
 
@@ -26,7 +26,7 @@ static CMARK_INLINE void cmark_chunk_free(cmark_mem *mem, cmark_chunk *c) {
   c->len = 0;
 }
 
-static CMARK_INLINE void cmark_chunk_ltrim(cmark_chunk *c) {
+static inline void cmark_chunk_ltrim(cmark_chunk *c) {
   assert(!c->alloc);
 
   while (c->len && cmark_isspace(c->data[0])) {
@@ -35,7 +35,7 @@ static CMARK_INLINE void cmark_chunk_ltrim(cmark_chunk *c) {
   }
 }
 
-static CMARK_INLINE void cmark_chunk_rtrim(cmark_chunk *c) {
+static inline void cmark_chunk_rtrim(cmark_chunk *c) {
   assert(!c->alloc);
 
   while (c->len > 0) {
@@ -46,20 +46,19 @@ static CMARK_INLINE void cmark_chunk_rtrim(cmark_chunk *c) {
   }
 }
 
-static CMARK_INLINE void cmark_chunk_trim(cmark_chunk *c) {
+static inline void cmark_chunk_trim(cmark_chunk *c) {
   cmark_chunk_ltrim(c);
   cmark_chunk_rtrim(c);
 }
 
-static CMARK_INLINE bufsize_t cmark_chunk_strchr(cmark_chunk *ch, int c,
-                                                 bufsize_t offset) {
+static inline bufsize_t cmark_chunk_strchr(cmark_chunk *ch, int c,
+                                           bufsize_t offset) {
   const unsigned char *p =
       (unsigned char *)memchr(ch->data + offset, c, ch->len - offset);
   return p ? (bufsize_t)(p - ch->data) : ch->len;
 }
 
-static CMARK_INLINE const char *cmark_chunk_to_cstr(cmark_mem *mem,
-                                                    cmark_chunk *c) {
+static inline const char *cmark_chunk_to_cstr(cmark_mem *mem, cmark_chunk *c) {
   unsigned char *str;
 
   if (c->alloc) {
@@ -76,8 +75,8 @@ static CMARK_INLINE const char *cmark_chunk_to_cstr(cmark_mem *mem,
   return (char *)str;
 }
 
-static CMARK_INLINE void cmark_chunk_set_cstr(cmark_mem *mem, cmark_chunk *c,
-                                              const char *str) {
+static inline void cmark_chunk_set_cstr(cmark_mem *mem, cmark_chunk *c,
+                                        const char *str) {
   unsigned char *old = c->alloc ? c->data : NULL;
   if (str == NULL) {
     c->len = 0;
@@ -94,19 +93,19 @@ static CMARK_INLINE void cmark_chunk_set_cstr(cmark_mem *mem, cmark_chunk *c,
   }
 }
 
-static CMARK_INLINE cmark_chunk cmark_chunk_literal(const char *data) {
+static inline cmark_chunk cmark_chunk_literal(const char *data) {
   bufsize_t len = data ? (bufsize_t)strlen(data) : 0;
   cmark_chunk c = {(unsigned char *)data, len, 0};
   return c;
 }
 
-static CMARK_INLINE cmark_chunk cmark_chunk_dup(const cmark_chunk *ch,
-                                                bufsize_t pos, bufsize_t len) {
+static inline cmark_chunk cmark_chunk_dup(const cmark_chunk *ch, bufsize_t pos,
+                                          bufsize_t len) {
   cmark_chunk c = {ch->data + pos, len, 0};
   return c;
 }
 
-static CMARK_INLINE cmark_chunk cmark_chunk_buf_detach(cmark_strbuf *buf) {
+static inline cmark_chunk cmark_chunk_buf_detach(cmark_strbuf *buf) {
   cmark_chunk c;
 
   c.len = buf->size;
@@ -118,14 +117,14 @@ static CMARK_INLINE cmark_chunk cmark_chunk_buf_detach(cmark_strbuf *buf) {
 
 /* trim_new variants are to be used when the source chunk may or may not be
  * allocated; forces a newly allocated chunk. */
-static CMARK_INLINE cmark_chunk cmark_chunk_ltrim_new(cmark_mem *mem, cmark_chunk *c) {
+static inline cmark_chunk cmark_chunk_ltrim_new(cmark_mem *mem, cmark_chunk *c) {
   cmark_chunk r = cmark_chunk_dup(c, 0, c->len);
   cmark_chunk_ltrim(&r);
   cmark_chunk_to_cstr(mem, &r);
   return r;
 }
 
-static CMARK_INLINE cmark_chunk cmark_chunk_rtrim_new(cmark_mem *mem, cmark_chunk *c) {
+static inline cmark_chunk cmark_chunk_rtrim_new(cmark_mem *mem, cmark_chunk *c) {
   cmark_chunk r = cmark_chunk_dup(c, 0, c->len);
   cmark_chunk_rtrim(&r);
   cmark_chunk_to_cstr(mem, &r);

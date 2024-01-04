@@ -6,7 +6,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdint.h>
-#include "config.h"
+
 #include "cmark-gfm.h"
 
 #ifdef __cplusplus
@@ -59,7 +59,7 @@ CMARK_GFM_EXPORT
 void cmark_strbuf_copy_cstr(char *data, bufsize_t datasize,
                             const cmark_strbuf *buf);
 
-static CMARK_INLINE const char *cmark_strbuf_cstr(const cmark_strbuf *buf) {
+static inline const char *cmark_strbuf_cstr(const cmark_strbuf *buf) {
   return (char *)buf->ptr;
 }
 
