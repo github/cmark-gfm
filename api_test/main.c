@@ -938,6 +938,615 @@ static void test_feed_across_line_ending(test_batch_runner *runner) {
   cmark_node_free(document);
 }
 
+// Streaming AST tests — exercise snapshot, change events, and node-morph
+// pointer stability across paragraph -> setext-heading rewrites.
+static void test_streaming_ast(test_batch_runner *runner) {
+  // Snapshot returns the live root and is non-NULL even before finish.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "Hello", 5);
+    cmark_node *snap = cmark_parser_snapshot(p);
+    OK(runner, snap != NULL, "snapshot returns non-null root before finish");
+    INT_EQ(runner, (int)cmark_node_get_type(snap), (int)CMARK_NODE_DOCUMENT,
+           "snapshot root is document");
+    cmark_parser_free(p);
+  }
+
+  // commit_frontier starts at zero and is monotonically non-decreasing.
+  // After "abc\n\ndef\n" the first paragraph is finalized (the blank line
+  // closed it and rules out setext/table promotion), so the frontier
+  // advances to at least the byte immediately after that paragraph (= 4,
+  // the start of the blank line). The second paragraph is still open and
+  // provisional, so the frontier does not include its bytes.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    INT_EQ(runner, (int)cmark_parser_commit_frontier(p), 0,
+           "commit_frontier starts at 0");
+    cmark_parser_feed(p, "abc\n\ndef\n", 9);
+    size_t f = cmark_parser_commit_frontier(p);
+    OK(runner, f >= 4 && f <= 5,
+       "commit_frontier advanced past committed first paragraph");
+    // Monotonicity: feeding the close of the second paragraph extends it
+    // but never moves frontier backwards.
+    cmark_parser_feed(p, "\n", 1);
+    size_t f2 = cmark_parser_commit_frontier(p);
+    OK(runner, f2 >= f, "commit_frontier is monotonically non-decreasing");
+    cmark_parser_free(p);
+  }
+
+  // The setext-rewrite path emits a RETYPED event, and the
+  // affected node retains its pointer identity across the morph.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "Hello\n", 6);
+    cmark_node *snap = cmark_parser_snapshot(p);
+    cmark_node *para = cmark_node_first_child(snap);
+    OK(runner, para != NULL, "paragraph node exists after first line");
+    INT_EQ(runner, (int)cmark_node_get_type(para),
+           (int)CMARK_NODE_PARAGRAPH, "first child is paragraph");
+
+    // Discard initial change records (paragraph creation, etc.).
+    cmark_change_iter *it0 =
+        cmark_parser_changes_since_last_snapshot(p);
+    cmark_node *n0;
+    while (cmark_change_iter_next(it0, &n0) != CMARK_CHANGE_NONE) { }
+    cmark_change_iter_free(it0);
+
+    // The setext underline arrives, rewriting the paragraph in place.
+    cmark_parser_feed(p, "=====\n", 6);
+
+    cmark_change_iter *it = cmark_parser_changes_since_last_snapshot(p);
+    int retyped_seen = 0;
+    int retyped_was_para = 0;
+    int retyped_node_is_same = 0;
+    cmark_node *n;
+    cmark_change_event k;
+    while ((k = cmark_change_iter_next(it, &n)) != CMARK_CHANGE_NONE) {
+      if (k == CMARK_CHANGE_NODE_RETYPED) {
+        retyped_seen++;
+        if (n == para)
+          retyped_node_is_same = 1;
+        if (cmark_node_get_type(n) == CMARK_NODE_HEADING)
+          retyped_was_para = 1;
+      }
+    }
+    cmark_change_iter_free(it);
+
+    OK(runner, retyped_seen == 1,
+       "exactly one RETYPED record for paragraph->setext");
+    OK(runner, retyped_node_is_same,
+       "RETYPED node pointer matches original paragraph (in-place morph)");
+    OK(runner, retyped_was_para,
+       "RETYPED node is now a heading");
+    INT_EQ(runner, (int)cmark_node_get_type(para),
+           (int)CMARK_NODE_HEADING,
+           "in-place morph: paragraph pointer is now a heading");
+
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // Paragraph -> GFM table head also reaches us via cmark_node_set_type
+  // (extensions/table.c calls it when promoting the paragraph). The
+  // RETYPED record should fire for that path too.
+  {
+    cmark_gfm_core_extensions_ensure_registered();
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_syntax_extension *table_ext =
+        cmark_find_syntax_extension("table");
+    OK(runner, table_ext != NULL, "found table extension");
+    cmark_parser_attach_syntax_extension(p, table_ext);
+
+    cmark_parser_feed(p, "Header 1 | Header 2\n", 20);
+    cmark_node *snap = cmark_parser_snapshot(p);
+    cmark_node *para = cmark_node_first_child(snap);
+    OK(runner, para != NULL && cmark_node_get_type(para) == CMARK_NODE_PARAGRAPH,
+       "first child is paragraph before delimiter row");
+
+    cmark_change_iter *it0 =
+        cmark_parser_changes_since_last_snapshot(p);
+    cmark_node *n0;
+    while (cmark_change_iter_next(it0, &n0) != CMARK_CHANGE_NONE) { }
+    cmark_change_iter_free(it0);
+
+    cmark_parser_feed(p, "--- | ---\n", 10);
+
+    cmark_change_iter *it = cmark_parser_changes_since_last_snapshot(p);
+    int retyped_seen = 0;
+    int retyped_node_is_same = 0;
+    cmark_node *n;
+    cmark_change_event k;
+    while ((k = cmark_change_iter_next(it, &n)) != CMARK_CHANGE_NONE) {
+      if (k == CMARK_CHANGE_NODE_RETYPED && n == para) {
+        retyped_seen++;
+        retyped_node_is_same = 1;
+      }
+    }
+    cmark_change_iter_free(it);
+
+    OK(runner, retyped_seen >= 1,
+       "RETYPED record emitted for paragraph->table morph");
+    OK(runner, retyped_node_is_same,
+       "RETYPED node pointer matches original paragraph (table morph)");
+
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // P2: open blocks carry CMARK_NODE__PROVISIONAL. Closed blocks lose it
+  // and emit a FINALIZED record. After cmark_parser_finish nothing is
+  // provisional.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    // Need at least one terminated line before a block exists in the AST.
+    // (cmark_parser_feed buffers partial lines until \n.)
+    cmark_parser_feed(p, "Hello\n", 6);
+    cmark_node *snap = cmark_parser_snapshot(p);
+    cmark_node *para = cmark_node_first_child(snap);
+    OK(runner, para != NULL, "open paragraph exists");
+    OK(runner, cmark_node_is_provisional(para),
+       "open paragraph is provisional");
+    OK(runner, !cmark_node_is_provisional(snap),
+       "document root is never provisional");
+
+    // Drain change records before the close.
+    cmark_change_iter *it0 =
+        cmark_parser_changes_since_last_snapshot(p);
+    cmark_node *n0; while (cmark_change_iter_next(it0, &n0)
+                          != CMARK_CHANGE_NONE) { }
+    cmark_change_iter_free(it0);
+
+    // Blank line closes the paragraph and rules out setext/table.
+    cmark_parser_feed(p, "\n", 1);
+    cmark_change_iter *it = cmark_parser_changes_since_last_snapshot(p);
+    int finalized_seen = 0;
+    int finalized_was_para = 0;
+    cmark_node *n; cmark_change_event k;
+    while ((k = cmark_change_iter_next(it, &n)) != CMARK_CHANGE_NONE) {
+      if (k == CMARK_CHANGE_NODE_FINALIZED) {
+        finalized_seen++;
+        if (n == para) finalized_was_para = 1;
+      }
+    }
+    cmark_change_iter_free(it);
+    OK(runner, finalized_seen >= 1,
+       "at least one FINALIZED record on paragraph close");
+    OK(runner, finalized_was_para,
+       "FINALIZED record references the paragraph node by identity");
+    OK(runner, !cmark_node_is_provisional(para),
+       "paragraph is no longer provisional after close");
+
+    cmark_node *doc = cmark_parser_finish(p);
+    // Walk the tree — no node should remain provisional.
+    {
+      cmark_iter *iter = cmark_iter_new(doc);
+      cmark_event_type ev;
+      int leftover_provisional = 0;
+      while ((ev = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+        if (ev == CMARK_EVENT_ENTER &&
+            cmark_node_is_provisional(cmark_iter_get_node(iter))) {
+          leftover_provisional++;
+        }
+      }
+      cmark_iter_free(iter);
+      INT_EQ(runner, leftover_provisional, 0,
+             "no provisional nodes after finish");
+    }
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // P3: snapshot returns a tree with inline children populated. A closed
+  // emphasis becomes EMPH; an unclosed delimiter falls back to literal text.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "Hello *world*\n", 14);
+    cmark_node *snap = cmark_parser_snapshot(p);
+    cmark_node *para = cmark_node_first_child(snap);
+    OK(runner, para != NULL && cmark_node_get_type(para) == CMARK_NODE_PARAGRAPH,
+       "first child is a paragraph");
+    // Walk inline children: expect TEXT, EMPH(TEXT).
+    cmark_node *first_inline = cmark_node_first_child(para);
+    OK(runner, first_inline != NULL,
+       "snapshot populated inline children");
+    int saw_emph = 0;
+    for (cmark_node *c = first_inline; c; c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_EMPH)
+        saw_emph = 1;
+    }
+    OK(runner, saw_emph,
+       "closed *...* surfaces as CMARK_NODE_EMPH after snapshot");
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // P3: an open paragraph with an unclosed `*` snapshots as literal text;
+  // once the closer arrives, a re-parse yields EMPH.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "Hello *world\n", 13);
+    cmark_node *snap1 = cmark_parser_snapshot(p);
+    cmark_node *para = cmark_node_first_child(snap1);
+    int saw_emph_before = 0;
+    for (cmark_node *c = cmark_node_first_child(para); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_EMPH) saw_emph_before = 1;
+    }
+    OK(runner, !saw_emph_before,
+       "unclosed `*` is literal text in interim snapshot");
+
+    // Append the closer on a continuation line; paragraph re-parses.
+    cmark_parser_feed(p, "again*\n", 7);
+    cmark_node *snap2 = cmark_parser_snapshot(p);
+    cmark_node *para2 = cmark_node_first_child(snap2);
+    OK(runner, para2 == para, "paragraph pointer identity preserved");
+    int saw_emph_after = 0;
+    for (cmark_node *c = cmark_node_first_child(para2); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_EMPH) saw_emph_after = 1;
+    }
+    OK(runner, saw_emph_after,
+       "closer arrival turns the run into EMPH on next snapshot");
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // Direction 1: a code block's content grows across snapshots; consumers
+  // must see CONTENT_UPDATED records (INLINES_REPARSED would be wrong since
+  // code blocks have no inlines).
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "```\nfirst\n", 10);
+    cmark_node *snap1 = cmark_parser_snapshot(p);
+    // Drain all change records so far.
+    cmark_change_iter *it0 = cmark_parser_changes_since_last_snapshot(p);
+    cmark_node *n0;
+    while (cmark_change_iter_next(it0, &n0) != CMARK_CHANGE_NONE) { }
+    cmark_change_iter_free(it0);
+
+    cmark_parser_feed(p, "second\n", 7);
+    cmark_parser_snapshot(p);
+    cmark_change_iter *it = cmark_parser_changes_since_last_snapshot(p);
+    int content_updated = 0;
+    int inlines_reparsed = 0;
+    cmark_node *n; cmark_change_event k;
+    while ((k = cmark_change_iter_next(it, &n)) != CMARK_CHANGE_NONE) {
+      if (k == CMARK_CHANGE_NODE_CONTENT_UPDATED) content_updated++;
+      if (k == CMARK_CHANGE_NODE_INLINES_REPARSED) inlines_reparsed++;
+    }
+    cmark_change_iter_free(it);
+    OK(runner, content_updated >= 1,
+       "code block emits CONTENT_UPDATED when its content grows");
+    INT_EQ(runner, inlines_reparsed, 0,
+           "code block does not emit INLINES_REPARSED (no inlines)");
+    (void)snap1;
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // Direction 2: an unmatched `*` in an open paragraph carries
+  // INLINE_PROVISIONAL on its TEXT node, distinguishing "tentatively
+  // unclosed emphasis" from "literal asterisk". When a closer arrives, the
+  // flag should disappear (the run becomes EMPH instead of TEXT).
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "Hello *partial\n", 15);
+    cmark_node *snap1 = cmark_parser_snapshot(p);
+    cmark_node *para = cmark_node_first_child(snap1);
+    int saw_inline_provisional = 0;
+    for (cmark_node *c = cmark_node_first_child(para); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_is_provisional(c) &&
+          cmark_node_get_type(c) == CMARK_NODE_TEXT) {
+        saw_inline_provisional = 1;
+      }
+    }
+    OK(runner, saw_inline_provisional,
+       "unmatched `*` in open block is INLINE_PROVISIONAL on its TEXT");
+    // Provide the closer; the EMPH that materializes should NOT be
+    // INLINE_PROVISIONAL.
+    cmark_parser_feed(p, "more*\n", 6);
+    cmark_parser_snapshot(p);
+    int still_provisional_text = 0;
+    int saw_emph_clean = 0;
+    for (cmark_node *c = cmark_node_first_child(para); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_TEXT &&
+          (c->flags & CMARK_NODE__INLINE_PROVISIONAL)) {
+        still_provisional_text = 1;
+      }
+      if (cmark_node_get_type(c) == CMARK_NODE_EMPH &&
+          !(c->flags & CMARK_NODE__INLINE_PROVISIONAL)) {
+        saw_emph_clean = 1;
+      }
+    }
+    OK(runner, !still_provisional_text,
+       "after closer arrives, no TEXT child carries INLINE_PROVISIONAL");
+    OK(runner, saw_emph_clean,
+       "the resolved EMPH is not INLINE_PROVISIONAL");
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // Direction 3: eager ref-def extraction. Refs resolve as soon as the def
+  // is followed by a non-whitespace byte that proves it is bounded — no
+  // trailing blank line needed.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "Click [foo] now.\n\n", 18);
+    // Para 1 finalized; pending [foo] registered.
+    cmark_parser_feed(p, "[foo]: http://x.example\n", 24);
+    // Para 2 still open; eager-extract sees parsed_len == content.size, defers.
+    cmark_node *snap1 = cmark_parser_snapshot(p);
+    cmark_node *para1 = cmark_node_first_child(snap1);
+    int link_before = 0;
+    for (cmark_node *c = cmark_node_first_child(para1); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_LINK) link_before = 1;
+    }
+    OK(runner, !link_before,
+       "before bounding evidence arrives, [foo] is unresolved");
+
+    // A non-whitespace next-line proves the def is bounded.
+    cmark_parser_feed(p, "Aftertext\n", 10);
+    cmark_node *snap2 = cmark_parser_snapshot(p);
+    cmark_node *para1_again = cmark_node_first_child(snap2);
+    OK(runner, para1_again == para1,
+       "para1 pointer identity preserved across eager-extract round");
+    int link_after = 0;
+    const char *url = NULL;
+    for (cmark_node *c = cmark_node_first_child(para1_again); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_LINK) {
+        link_after = 1;
+        url = cmark_node_get_url(c);
+      }
+    }
+    OK(runner, link_after,
+       "[foo] resolves to LINK after eager extraction (no blank line needed)");
+    OK(runner, url && strcmp(url, "http://x.example") == 0,
+       "eagerly-extracted def carries correct URL");
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // Direction 3: safety — when content following a def is whitespace, we
+  // MUST defer (could be a title-continuation). One-shot must agree with
+  // streamed result.
+  {
+    const char *input = "[foo]: http://x.example\n   \"my title\"\n\nUse [foo].\n";
+    size_t len = strlen(input);
+    cmark_node *one = cmark_parse_document(input, len, CMARK_OPT_DEFAULT);
+    char *html_one = cmark_render_html(one, CMARK_OPT_DEFAULT, NULL);
+
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    for (size_t i = 0; i < len; ++i) {
+      cmark_parser_feed(p, input + i, 1);
+      cmark_parser_snapshot(p);
+    }
+    cmark_node *streamed = cmark_parser_finish(p);
+    char *html_stream = cmark_render_html(streamed, CMARK_OPT_DEFAULT, NULL);
+    STR_EQ(runner, html_stream, html_one,
+           "title-continuation safety: streamed HTML matches one-shot");
+    free(html_one); free(html_stream);
+    cmark_node_free(one); cmark_node_free(streamed);
+    cmark_parser_free(p);
+  }
+
+  // P5: when a [foo] reference is parsed before its definition arrives, the
+  // containing paragraph gets re-parsed once the definition is added.
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    // Paragraph 1 references [foo] which has no def yet.
+    cmark_parser_feed(p, "See [foo] for details\n\n", 23);
+    cmark_node *snap1 = cmark_parser_snapshot(p);
+    cmark_node *para = cmark_node_first_child(snap1);
+    OK(runner, para != NULL, "paragraph created");
+    // Walk inline children — should contain no LINK before def arrives.
+    int link_before = 0;
+    for (cmark_node *c = cmark_node_first_child(para); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_LINK) link_before = 1;
+    }
+    OK(runner, !link_before,
+       "[foo] is plain text before definition arrives");
+
+    // Now feed the definition. The blank line closes the def-bearing
+    // paragraph, which is the trigger for resolve_reference_link_definitions
+    // to populate the refmap (CommonMark requirement).
+    cmark_parser_feed(p, "[foo]: http://example.com\n\n", 27);
+    cmark_node *snap2 = cmark_parser_snapshot(p);
+    // Paragraph 1's pointer should be unchanged; [foo] should now be a LINK.
+    cmark_node *para2 = cmark_node_first_child(snap2);
+    OK(runner, para2 == para,
+       "ref-resolved paragraph keeps pointer identity");
+    int link_after = 0;
+    const char *link_url = NULL;
+    for (cmark_node *c = cmark_node_first_child(para2); c;
+         c = cmark_node_next(c)) {
+      if (cmark_node_get_type(c) == CMARK_NODE_LINK) {
+        link_after = 1;
+        link_url = cmark_node_get_url(c);
+      }
+    }
+    OK(runner, link_after,
+       "[foo] re-parses as CMARK_NODE_LINK after definition arrives");
+    OK(runner, link_url && strcmp(link_url, "http://example.com") == 0,
+       "resolved link carries the correct URL");
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+
+  // P2: a paragraph that is just a reference definition gets removed at
+  // finalize; we should see a NODE_REMOVED record (and no FINALIZED for it).
+  {
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser_feed(p, "[foo]: http://example.com\n", 26);
+    // Drain ADDED/etc.
+    cmark_change_iter *it0 =
+        cmark_parser_changes_since_last_snapshot(p);
+    cmark_node *n0; while (cmark_change_iter_next(it0, &n0)
+                          != CMARK_CHANGE_NONE) { }
+    cmark_change_iter_free(it0);
+    cmark_parser_feed(p, "\n", 1); // close the paragraph
+    cmark_change_iter *it =
+        cmark_parser_changes_since_last_snapshot(p);
+    int removed_seen = 0;
+    cmark_node *n; cmark_change_event k;
+    while ((k = cmark_change_iter_next(it, &n)) != CMARK_CHANGE_NONE) {
+      if (k == CMARK_CHANGE_NODE_REMOVED) removed_seen++;
+    }
+    cmark_change_iter_free(it);
+    OK(runner, removed_seen == 1,
+       "ref-def-only paragraph emits exactly one NODE_REMOVED");
+    cmark_node *doc = cmark_parser_finish(p);
+    cmark_parser_free(p);
+    cmark_node_free(doc);
+  }
+}
+
+// Differential validation: for a representative corpus of markdown inputs,
+// confirm that streaming parse with snapshots-between-every-byte produces
+// the same final HTML as a one-shot parse. Also confirms monotonicity of
+// commit_frontier and that no node remains provisional after finish.
+static void test_streaming_convergence(test_batch_runner *runner) {
+  static const char *corpus[] = {
+    "Hello world\n",
+    "Hello\n=====\n",
+    "# Heading\n\nParagraph with *emphasis* and **strong**.\n",
+    "- item one\n- item two\n- item three\n",
+    "1. one\n2. two\n\n3. three (loose)\n",
+    "> blockquote line one\n> line two\n",
+    "```c\nint main(void){return 0;}\n```\n",
+    "    indented code\n    second line\n",
+    "Header 1 | Header 2\n--- | ---\nA | B\nC | D\n",
+    "See [foo] for more.\n\n[foo]: http://example.com \"title\"\n",
+    "First paragraph.\n\nSecond with `code` and a [link](http://x.com).\n",
+    "<p>raw html</p>\n\nThen prose.\n",
+    "Paragraph one.\nLine two of paragraph one.\n\nParagraph two.\n",
+    "Mix: **bold *nested italic* still bold** plain\n",
+    // Direction 3 edge cases:
+    //  - title-on-continuation-line. Eager extract MUST defer until full
+    //    title arrives, otherwise streamed-vs-oneshot diverges.
+    "[foo]: http://x.example\n   \"title here\"\n\nUse [foo].\n",
+    //  - multiple back-to-back defs. The first is provably bounded by the
+    //    second `[`, so eager extract should fire.
+    "[a]: http://a.example\n[b]: http://b.example\n\nSee [a] and [b].\n",
+    //  - def followed by non-title non-whitespace prose.
+    "[a]: http://a.example\nNot a title line.\n\nUsing [a].\n",
+    //  - unclosed emphasis spanning multiple lines, then closed.
+    "Open *star\nstill open\nnow closed*\n",
+  };
+  size_t n = sizeof(corpus) / sizeof(*corpus);
+
+  for (size_t i = 0; i < n; ++i) {
+    const char *input = corpus[i];
+    size_t input_len = strlen(input);
+
+    // Reference: one-shot parse + render.
+    cmark_node *one = cmark_parse_document(input, input_len, CMARK_OPT_DEFAULT);
+    char *html_one = cmark_render_html(one, CMARK_OPT_DEFAULT, NULL);
+
+    // Streamed: feed byte-by-byte, snapshot after each, then finish.
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    size_t prev_frontier = 0;
+    int monotonic = 1;
+    for (size_t k = 0; k < input_len; ++k) {
+      cmark_parser_feed(p, input + k, 1);
+      cmark_parser_snapshot(p);
+      size_t f = cmark_parser_commit_frontier(p);
+      if (f < prev_frontier) monotonic = 0;
+      prev_frontier = f;
+    }
+    cmark_node *streamed = cmark_parser_finish(p);
+    char *html_stream = cmark_render_html(streamed, CMARK_OPT_DEFAULT, NULL);
+
+    // No node should remain provisional after finish.
+    int leftover = 0;
+    cmark_iter *iter = cmark_iter_new(streamed);
+    cmark_event_type ev;
+    while ((ev = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+      if (ev == CMARK_EVENT_ENTER &&
+          cmark_node_is_provisional(cmark_iter_get_node(iter))) {
+        leftover++;
+      }
+    }
+    cmark_iter_free(iter);
+
+    OK(runner, monotonic, "convergence[%zu]: commit_frontier monotonic", i);
+    INT_EQ(runner, leftover, 0,
+           "convergence[%zu]: no provisional nodes after finish", i);
+    STR_EQ(runner, html_stream, html_one,
+           "convergence[%zu]: streaming HTML == one-shot HTML", i);
+
+    free(html_one);
+    free(html_stream);
+    cmark_node_free(one);
+    cmark_node_free(streamed);
+    cmark_parser_free(p);
+  }
+
+  // Same convergence guarantee with GFM extensions enabled — exercises the
+  // paragraph -> table morph and the strikethrough/autolink inline paths.
+  cmark_gfm_core_extensions_ensure_registered();
+  static const char *gfm_corpus[] = {
+    "Header 1 | Header 2\n--- | ---\nA | B\nC | D\n",
+    "Mix ~strike~ and **bold** text.\n",
+    "Visit https://example.com today.\n",
+    "Tasks:\n- [ ] todo\n- [x] done\n",
+  };
+  size_t gn = sizeof(gfm_corpus) / sizeof(*gfm_corpus);
+  for (size_t i = 0; i < gn; ++i) {
+    const char *input = gfm_corpus[i];
+    size_t input_len = strlen(input);
+
+    // Helper: build a parser with GFM core extensions attached.
+    #define ATTACH_GFM_EXTS(p) do { \
+      const char *exts[] = {"table","strikethrough","autolink","tasklist"}; \
+      for (size_t e = 0; e < sizeof(exts)/sizeof(*exts); ++e) { \
+        cmark_syntax_extension *x = cmark_find_syntax_extension(exts[e]); \
+        if (x) cmark_parser_attach_syntax_extension((p), x); \
+      } \
+    } while (0)
+
+    cmark_parser *one_p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    ATTACH_GFM_EXTS(one_p);
+    cmark_parser_feed(one_p, input, input_len);
+    cmark_node *one = cmark_parser_finish(one_p);
+    char *html_one = cmark_render_html(one, CMARK_OPT_DEFAULT,
+                                       cmark_parser_get_syntax_extensions(one_p));
+    cmark_parser_free(one_p);
+
+    cmark_parser *p = cmark_parser_new(CMARK_OPT_DEFAULT);
+    ATTACH_GFM_EXTS(p);
+    for (size_t k = 0; k < input_len; ++k) {
+      cmark_parser_feed(p, input + k, 1);
+      cmark_parser_snapshot(p);
+    }
+    cmark_node *streamed = cmark_parser_finish(p);
+    char *html_stream = cmark_render_html(streamed, CMARK_OPT_DEFAULT,
+                                          cmark_parser_get_syntax_extensions(p));
+
+    STR_EQ(runner, html_stream, html_one,
+           "gfm-convergence[%zu]: streaming HTML == one-shot HTML", i);
+
+    free(html_one);
+    free(html_stream);
+    cmark_node_free(one);
+    cmark_node_free(streamed);
+    cmark_parser_free(p);
+    #undef ATTACH_GFM_EXTS
+  }
+}
+
 #if !defined(_WIN32) || defined(__CYGWIN__)
 #  include <sys/time.h>
 static struct timeval _before, _after;
@@ -1156,6 +1765,8 @@ int main() {
   test_cplusplus(runner);
   test_safe(runner);
   test_feed_across_line_ending(runner);
+  test_streaming_ast(runner);
+  test_streaming_convergence(runner);
   test_pathological_regressions(runner);
   source_pos(runner);
   source_pos_inlines(runner);

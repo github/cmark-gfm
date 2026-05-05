@@ -12,6 +12,7 @@
 #include "utf8.h"
 #include "scanners.h"
 #include "inlines.h"
+#include "streaming.h"
 #include "syntax_extension.h"
 
 static const char *EMDASH = "\xE2\x80\x94";
@@ -63,6 +64,11 @@ typedef struct subject{
   bufsize_t backticks[MAXBACKTICKS + 1];
   bool scanned_for_backticks;
   bool no_link_openers;
+  // Streaming: the block whose content this subject is parsing. Used to
+  // register pending-ref entries when an unresolved [label] is seen, so the
+  // block can be re-parsed once the definition arrives. NULL means "don't
+  // track" — preserves backwards-compatibility with non-streaming callers.
+  cmark_node *block;
 } subject;
 
 // Extensions may populate this.
@@ -200,6 +206,7 @@ static void subject_from_buf(cmark_mem *mem, int line_number, int block_offset, 
   }
   e->scanned_for_backticks = false;
   e->no_link_openers = true;
+  e->block = NULL;
 }
 
 static CMARK_INLINE int isbacktick(int c) { return (c == '`'); }
@@ -1222,6 +1229,16 @@ static cmark_node *handle_close_bracket(cmark_parser *parser, subject *subj) {
 
   if (found_label) {
     ref = (cmark_reference *)cmark_map_lookup(subj->refmap, &raw_label);
+    // Streaming: if the lookup missed, the block we're parsing depends on a
+    // definition that hasn't arrived yet. Register it so the block is
+    // marked inline-dirty when the def comes in (see streaming.c). The
+    // helper copies raw_label, so it's safe to free below.
+    if (!ref && subj->block) {
+      cmark_parser *active = cmark_streaming_active_parser();
+      if (active && active->refmap == subj->refmap) {
+        cmark_streaming_add_pending_ref(active, raw_label, subj->block);
+      }
+    }
     cmark_chunk_free(subj->mem, &raw_label);
   }
 
@@ -1537,10 +1554,33 @@ void cmark_parse_inlines(cmark_parser *parser,
   subject subj;
   cmark_chunk content = {parent->content.ptr, parent->content.size, 0};
   subject_from_buf(parser->mem, parent->start_line, parent->start_column - 1 + parent->internal_offset, &subj, &content, refmap);
+  // Streaming: tell the inline parser which block it's working on, so it
+  // can register pending-ref users when [label] lookups miss.
+  subj.block = parent;
   cmark_chunk_rtrim(&subj.input);
 
   while (!is_eof(&subj) && parse_inline(parser, &subj, parent, options))
     ;
+
+  // Streaming: if the block is still open, every delimiter / bracket on the
+  // stack at end-of-content is a candidate opener whose closer might yet
+  // arrive. Mark its in-tree inline text node as INLINE_PROVISIONAL BEFORE
+  // process_emphasis runs — that function (a) frees the inl_text of
+  // delimiters it matches into emphasis (so the flag dies naturally with the
+  // node), and (b) drains the stack on its way out, so any after-the-fact
+  // walk would be empty. For a closed block we leave the flag off — leftover
+  // openers in a closed block are truly literal text.
+  bool block_open = parent && (parent->flags & CMARK_NODE__OPEN);
+  if (block_open) {
+    for (delimiter *d = subj.last_delim; d != NULL; d = d->previous) {
+      if (d->inl_text)
+        d->inl_text->flags |= CMARK_NODE__INLINE_PROVISIONAL;
+    }
+    for (bracket *b = subj.last_bracket; b != NULL; b = b->previous) {
+      if (b->inl_text)
+        b->inl_text->flags |= CMARK_NODE__INLINE_PROVISIONAL;
+    }
+  }
 
   process_emphasis(parser, &subj, 0);
   // free bracket and delim stack
@@ -1621,8 +1661,15 @@ bufsize_t cmark_parse_reference_inline(cmark_mem *mem, cmark_chunk *input,
       return 0;
     }
   }
-  // insert reference into refmap
-  cmark_reference_create(refmap, &lab, &url, &title);
+  // Streaming: a NULL refmap is a "dry run" — return the parsed length
+  // without committing to any map. Used by the eager-extract path in
+  // add_line to test whether the content currently spells a complete def
+  // before deciding whether it is safe to commit (no title-continuation
+  // could still extend it). All chunks parsed above are alloc=0 views into
+  // subj.input, so skipping the create call leaks nothing.
+  if (refmap != NULL) {
+    cmark_reference_create(refmap, &lab, &url, &title);
+  }
   return subj.pos;
 }
 

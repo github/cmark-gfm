@@ -3,6 +3,7 @@
 #include "references.h"
 #include "inlines.h"
 #include "chunk.h"
+#include "streaming.h"
 
 static void reference_free(cmark_map *map, cmark_map_entry *_ref) {
   cmark_reference *ref = (cmark_reference *)_ref;
@@ -24,7 +25,14 @@ void cmark_reference_create(cmark_map *map, cmark_chunk *label,
   if (reflabel == NULL)
     return;
 
-  assert(map->sorted == NULL);
+  // Streaming: refs may be added after a previous lookup has populated the
+  // sorted-index cache (this never happened in batch mode, where defs were
+  // fully discovered before any inline parsing). Invalidate the cache so
+  // the next lookup re-sorts and observes the new entry.
+  if (map->sorted) {
+    map->mem->free(map->sorted);
+    map->sorted = NULL;
+  }
 
   ref = (cmark_reference *)map->mem->calloc(1, sizeof(*ref));
   ref->entry.label = reflabel;
@@ -36,6 +44,17 @@ void cmark_reference_create(cmark_map *map, cmark_chunk *label,
 
   map->refs = (cmark_map_entry *)ref;
   map->size++;
+
+  // Streaming: notify any blocks that previously failed to resolve this
+  // label so they get re-parsed on the next snapshot. We cross-check that
+  // the active parser owns this map — public callers may operate on a
+  // standalone map outside any parser context.
+  {
+    cmark_parser *active = cmark_streaming_active_parser();
+    if (active && active->refmap == map) {
+      cmark_streaming_resolve_pending_refs(active, *label);
+    }
+  }
 }
 
 cmark_map *cmark_reference_map_new(cmark_mem *mem) {

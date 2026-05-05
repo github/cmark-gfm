@@ -23,6 +23,7 @@
 #include "houdini.h"
 #include "buffer.h"
 #include "footnotes.h"
+#include "streaming.h"
 
 #define CODE_INDENT 4
 #define TAB_STOP 4
@@ -116,6 +117,8 @@ static void cmark_parser_dispose(cmark_parser *parser) {
 
   if (parser->refmap)
     cmark_map_free(parser->refmap);
+
+  cmark_streaming_state_free(parser->mem, &parser->streaming);
 }
 
 static void cmark_parser_reset(cmark_parser *parser) {
@@ -141,6 +144,8 @@ static void cmark_parser_reset(cmark_parser *parser) {
   parser->syntax_extensions = saved_exts;
   parser->inline_syntax_extensions = saved_inline_exts;
   parser->options = saved_options;
+
+  cmark_streaming_state_init(&parser->streaming);
 }
 
 cmark_parser *cmark_parser_new_with_mem(int options, cmark_mem *mem) {
@@ -167,6 +172,7 @@ void cmark_parser_free(cmark_parser *parser) {
 }
 
 static cmark_node *finalize(cmark_parser *parser, cmark_node *b);
+static void try_eager_ref_extract(cmark_parser *parser, cmark_node *p);
 
 // Returns true if line has only space characters, else false.
 static bool is_blank(cmark_strbuf *s, bufsize_t offset) {
@@ -218,6 +224,19 @@ static void add_line(cmark_node *node, cmark_chunk *ch, cmark_parser *parser) {
   }
   cmark_strbuf_put(&node->content, ch->data + parser->offset,
                    ch->len - parser->offset);
+
+  // Streaming: try to extract any leading ref-defs that are now complete
+  // and bounded. This populates the refmap as soon as possible — without
+  // waiting for the paragraph to close — which is what lets earlier blocks
+  // with [foo] references resolve to LINK on the next snapshot.
+  try_eager_ref_extract(parser, node);
+
+  // Streaming: queue this block for snapshot processing. The handler
+  // (cmark_streaming_run_pending_inlines) decides per block whether to emit
+  // INLINES_REPARSED (for inline-bearing blocks) or CONTENT_UPDATED (for
+  // code/html and other literal blocks). The dirty-mark is idempotent — at
+  // most one record per block per snapshot.
+  cmark_streaming_mark_inline_dirty(parser, node);
 }
 
 static void remove_trailing_blank_lines(cmark_strbuf *ln) {
@@ -280,6 +299,62 @@ static bool resolve_reference_link_definitions(
   return !is_blank(&b->content, 0);
 }
 
+// Streaming: attempt to extract leading [label]: url ["title"] reference
+// definitions from a paragraph's content as soon as we can prove the def is
+// bounded — i.e., before the paragraph closes.
+//
+// Why this is needed: in standard cmark, ref-defs are extracted only when
+// their host paragraph finalizes. For incremental input that's a problem:
+// a [foo] reference earlier in the document stays as plain text until the
+// trailing def-paragraph closes (typically requiring a following blank line
+// the user may not have fed yet). Eager extraction lets the def populate
+// the refmap as soon as it is unambiguously complete.
+//
+// Why it must be careful: the title can extend onto the next line (CommonMark
+// permits [foo]: url\n   "title"\n). If we extract a def at the moment we
+// see [foo]: url\n and the next bytes turn out to be    "title"\n, we
+// have committed a different AST than one-shot parse would have produced —
+// a contract violation.
+//
+// Safety rule: a leading def is committable iff the first byte after its
+// parsed extent is non-whitespace. Reasoning:
+//   - whitespace at that byte could be the leading indent of a title-bearing
+//     continuation line; defer until the next byte arrives;
+//   - a non-whitespace byte means any title would have had to start on the
+//     def line itself (already considered by the parser) and didn't, so the
+//     def is final and the trailing content belongs to a subsequent block.
+static void try_eager_ref_extract(cmark_parser *parser, cmark_node *p) {
+  if (S_type(p) != CMARK_NODE_PARAGRAPH)
+    return;
+  cmark_strbuf *node_content = &p->content;
+  bufsize_t cursor = 0;
+  while (cursor < node_content->size && node_content->ptr[cursor] == '[') {
+    cmark_chunk dryrun = {node_content->ptr + cursor,
+                           node_content->size - cursor, 0};
+    bufsize_t parsed_len = cmark_parse_reference_inline(parser->mem, &dryrun,
+                                                        /*refmap=*/NULL);
+    if (parsed_len == 0)
+      break;
+    // Safety: can we prove the def is bounded?
+    bufsize_t next_byte_offset = cursor + parsed_len;
+    if (next_byte_offset >= node_content->size)
+      break;  // No bytes after — title might still extend the def.
+    unsigned char next_byte = node_content->ptr[next_byte_offset];
+    if (next_byte == ' ' || next_byte == '\t')
+      break;  // Whitespace lead-in — could be a title-continuation line.
+    // Bounded: commit.
+    cmark_chunk commit = {node_content->ptr + cursor,
+                           node_content->size - cursor, 0};
+    cmark_parse_reference_inline(parser->mem, &commit, parser->refmap);
+    cursor = next_byte_offset;
+  }
+  if (cursor > 0) {
+    cmark_strbuf_drop(node_content, cursor);
+    // Re-attempting from new content start in a future call is correct —
+    // we always loop from byte 0 of node_content.
+  }
+}
+
 static cmark_node *finalize(cmark_parser *parser, cmark_node *b) {
   bufsize_t pos;
   cmark_node *item;
@@ -318,7 +393,13 @@ static cmark_node *finalize(cmark_parser *parser, cmark_node *b) {
     has_content = resolve_reference_link_definitions(parser, b);
     if (!has_content) {
       // remove blank node (former reference def)
+      // Streaming: the paragraph turned out to be only reference defs and
+      // is being deleted. Emit a NODE_REMOVED record with the parent, since
+      // the node pointer is about to be invalid.
+      cmark_streaming_record(parser, CMARK_CHANGE_NODE_REMOVED, parent);
       cmark_node_free(b);
+      // Skip the FINALIZED tail-emit below — node is gone.
+      return parent;
     }
     break;
   }
@@ -387,6 +468,14 @@ static cmark_node *finalize(cmark_parser *parser, cmark_node *b) {
     break;
   }
 
+  // Streaming: clear the provisional flag and announce that this block is
+  // now committed. We skip DOCUMENT to mirror the policy in add_child.
+  if (S_type(b) != CMARK_NODE_DOCUMENT &&
+      (b->flags & CMARK_NODE__PROVISIONAL)) {
+    b->flags &= ~CMARK_NODE__PROVISIONAL;
+    cmark_streaming_record(parser, CMARK_CHANGE_NODE_FINALIZED, b);
+  }
+
   return parent;
 }
 
@@ -413,6 +502,14 @@ static cmark_node *add_child(cmark_parser *parser, cmark_node *parent,
     child->prev = NULL;
   }
   parent->last_child = child;
+
+  // Streaming: every newly opened block is provisional until finalized.
+  // The DOCUMENT root is the parser-internal frame and never carries the
+  // flag — it is created in cmark_parser_reset, before the streaming state
+  // exists, and never represents user-visible content directly.
+  child->flags |= CMARK_NODE__PROVISIONAL;
+  cmark_streaming_record(parser, CMARK_CHANGE_NODE_ADDED, child);
+
   return child;
 }
 
@@ -434,6 +531,12 @@ void cmark_manage_extensions_special_characters(cmark_parser *parser, int add) {
 
 // Walk through node and all children, recursively, parsing
 // string content into inline content where appropriate.
+//
+// Streaming: blocks whose inline content has already been parsed by
+// cmark_parser_snapshot — and not modified since — are skipped. The
+// indicator is `inline_parsed_len == content.size && !INLINE_DIRTY`. New
+// content arriving via add_line resets INLINE_DIRTY, so this skip only
+// fires for genuinely up-to-date subtrees.
 static void process_inlines(cmark_parser *parser,
                             cmark_map *refmap, int options) {
   cmark_iter *iter = cmark_iter_new(parser->root);
@@ -446,7 +549,20 @@ static void process_inlines(cmark_parser *parser,
     cur = cmark_iter_get_node(iter);
     if (ev_type == CMARK_EVENT_ENTER) {
       if (contains_inlines(cur)) {
-        cmark_parse_inlines(parser, cur, refmap, options);
+        bool already_parsed =
+            !(cur->flags & CMARK_NODE__INLINE_DIRTY) &&
+            cur->inline_parsed_len == cur->content.size &&
+            cur->content.size > 0;
+        if (!already_parsed) {
+          // Streaming may have produced inline children at an earlier
+          // snapshot; drop them so this re-parse is the authoritative one.
+          while (cur->first_child) {
+            cmark_node_free(cur->first_child);
+          }
+          cmark_parse_inlines(parser, cur, refmap, options);
+          cur->inline_parsed_len = cur->content.size;
+          cur->flags &= ~CMARK_NODE__INLINE_DIRTY;
+        }
       }
     }
   }
@@ -694,7 +810,14 @@ cmark_node *cmark_parse_document(const char *buffer, size_t len, int options) {
 }
 
 void cmark_parser_feed(cmark_parser *parser, const char *buffer, size_t len) {
+  // Streaming: mark this parser active for the duration of the call so that
+  // mutation primitives invoked during parsing can find it (see streaming.h).
+  // We restore the prior value rather than nulling, because parsers can call
+  // each other reentrantly via cmark_parser_feed_reentrant.
+  cmark_parser *prev = cmark_streaming_active_parser();
+  cmark_streaming_set_active_parser(parser);
   S_parser_feed(parser, (const unsigned char *)buffer, len, false);
+  cmark_streaming_set_active_parser(prev);
 }
 
 void cmark_parser_feed_reentrant(cmark_parser *parser, const char *buffer, size_t len) {
@@ -704,7 +827,10 @@ void cmark_parser_feed_reentrant(cmark_parser *parser, const char *buffer, size_
   cmark_strbuf_puts(&saved_linebuf, cmark_strbuf_cstr(&parser->linebuf));
   cmark_strbuf_clear(&parser->linebuf);
 
+  cmark_parser *prev = cmark_streaming_active_parser();
+  cmark_streaming_set_active_parser(parser);
   S_parser_feed(parser, (const unsigned char *)buffer, len, true);
+  cmark_streaming_set_active_parser(prev);
 
   cmark_strbuf_sets(&parser->linebuf, cmark_strbuf_cstr(&saved_linebuf));
   cmark_strbuf_free(&saved_linebuf);
@@ -719,6 +845,12 @@ static void S_parser_feed(cmark_parser *parser, const unsigned char *buffer,
     parser->total_size = UINT_MAX;
   else
     parser->total_size += len;
+
+  // Streaming: account for bytes that are now part of the consumed input.
+  // The commit frontier is a subset of total_consumed_bytes — see
+  // streaming.h. This advances unconditionally; the frontier itself is
+  // advanced at block-finalization points.
+  cmark_streaming_advance_consumed(parser, len);
 
   if (parser->last_buffer_ended_with_cr && *buffer == '\n') {
     // skip NL if last buffer ended with CR ; see #117
@@ -743,7 +875,16 @@ static void S_parser_feed(cmark_parser *parser, const unsigned char *buffer,
     }
 
     chunk_len = (bufsize_t)(eol - buffer);
+    // Streaming: capture the byte-size of any carryover buffered from a
+    // prior feed BEFORE we mutate linebuf. Used below to advance the
+    // line-start map.
+    bufsize_t carryover = parser->linebuf.size;
     if (process) {
+      // Streaming: record where this line started in the global input
+      // stream. parser->streaming.current_line_start_byte was set when the
+      // previous line ended (or 0 at parser creation).
+      cmark_streaming_record_line_start(parser,
+                                        parser->streaming.current_line_start_byte);
       if (parser->linebuf.size > 0) {
         cmark_strbuf_put(&parser->linebuf, buffer, chunk_len);
         S_process_line(parser, parser->linebuf.ptr, parser->linebuf.size);
@@ -763,20 +904,36 @@ static void S_parser_feed(cmark_parser *parser, const unsigned char *buffer,
     }
 
     buffer += chunk_len;
+    bufsize_t line_ending_bytes = 0;
     if (buffer < end) {
       if (*buffer == '\0') {
         // skip over NULL
         buffer++;
+        line_ending_bytes++;
       } else {
         // skip over line ending characters
         if (*buffer == '\r') {
           buffer++;
+          line_ending_bytes++;
           if (buffer == end)
             parser->last_buffer_ended_with_cr = true;
         }
-        if (buffer < end && *buffer == '\n')
+        if (buffer < end && *buffer == '\n') {
           buffer++;
+          line_ending_bytes++;
+        }
       }
+    }
+
+    // Streaming: advance the in-progress-line cursor. If we just processed
+    // a complete line, current_line_start_byte moves to the start of the
+    // NEXT line (= carryover + this chunk + line ending). If we only
+    // buffered a partial line, the start doesn't move (we're still
+    // accumulating bytes for the same line).
+    if (process) {
+      parser->streaming.current_line_start_byte +=
+          (size_t)carryover + (size_t)chunk_len + (size_t)line_ending_bytes;
+      cmark_streaming_recompute_frontier(parser);
     }
   }
 }
@@ -1203,7 +1360,11 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
 
       if (has_content) {
 
-        (*container)->type = (uint16_t)CMARK_NODE_HEADING;
+        // Rewrite the paragraph in place. Going through cmark_node_set_type
+        // (rather than a direct type assignment) routes the rewrite through
+        // the streaming event stream: pointer identity is preserved, and a
+        // RETYPED record is emitted for any active snapshot consumer.
+        cmark_node_set_type(*container, CMARK_NODE_HEADING);
         (*container)->as.heading.level = lev;
         (*container)->as.heading.setext = true;
         S_advance_offset(parser, input, input->len - 1 - parser->offset, false);
@@ -1520,10 +1681,15 @@ finished:
 cmark_node *cmark_parser_finish(cmark_parser *parser) {
   cmark_node *res;
   cmark_llist *extensions;
+  cmark_parser *prev_active;
 
   /* Parser was already finished once */
   if (parser->root == NULL)
     return NULL;
+
+  // Streaming: see comment in cmark_parser_feed for rationale.
+  prev_active = cmark_streaming_active_parser();
+  cmark_streaming_set_active_parser(parser);
 
   if (parser->linebuf.size) {
     S_process_line(parser, parser->linebuf.ptr, parser->linebuf.size);
@@ -1556,6 +1722,8 @@ cmark_node *cmark_parser_finish(cmark_parser *parser) {
   parser->root = NULL;
 
   cmark_parser_reset(parser);
+
+  cmark_streaming_set_active_parser(prev_active);
 
   return res;
 }

@@ -53,9 +53,28 @@ enum cmark_node__internal_flags {
   CMARK_NODE__LAST_LINE_BLANK = (1 << 1),
   CMARK_NODE__LAST_LINE_CHECKED = (1 << 2),
 
+  /**
+   * Streaming: this block/inline node is provisional and may still be
+   * rewritten by future input. Cleared when the parser commits the node.
+   */
+  CMARK_NODE__PROVISIONAL = (1 << 3),
+
+  /**
+   * Streaming (inline): this inline node represents an as-yet-unmatched
+   * delimiter (e.g. a trailing * or [ whose closer has not arrived).
+   * Renderers should treat it as tentatively literal.
+   */
+  CMARK_NODE__INLINE_PROVISIONAL = (1 << 4),
+
+  /**
+   * Streaming: this block's inline content is dirty and must be re-parsed
+   * on the next snapshot. Internal use only.
+   */
+  CMARK_NODE__INLINE_DIRTY = (1 << 5),
+
   // Extensions can register custom flags by calling `cmark_register_node_flag`.
   // This is the starting value for the custom flags.
-  CMARK_NODE__REGISTER_FIRST = (1 << 3),
+  CMARK_NODE__REGISTER_FIRST = (1 << 6),
 };
 
 typedef uint16_t cmark_node_internal_flags;
@@ -108,6 +127,19 @@ struct cmark_node {
     int cell_index; // For keeping track of TABLE_CELL table alignments
     void *opaque;
   } as;
+
+  /**
+   * Streaming: bytes of `content` already consumed by the most recent
+   * incremental inline parse. 0 means "never parsed" (the natural calloc
+   * value used by make_block). Internal use only.
+   */
+  bufsize_t inline_parsed_len;
+
+  /**
+   * Streaming: intrusive next-pointer for the parser's dirty-block list.
+   * NULL when not on the list. Internal use only.
+   */
+  struct cmark_node *dirty_next;
 };
 
 /**

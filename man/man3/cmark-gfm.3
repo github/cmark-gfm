@@ -1,8 +1,9 @@
-.TH cmark-gfm 3 "April 08, 2019" "LOCAL" "Library Functions Manual"
+.TH cmark-gfm 3 "May 05, 2026" "LOCAL" "Library Functions Manual"
 .SH
 NAME
 .PP
-\f[B]cmark\-gfm\f[] \- CommonMark parsing, manipulating, and rendering
+\f[B]cmark\-gfm\f[] \- CommonMark parsing, manipulating, and
+rendering
 
 .SH
 DESCRIPTION
@@ -13,9 +14,9 @@ Simple Interface
 \fIchar *\f[] \fBcmark_markdown_to_html\f[](\fIconst char *text\f[], \fIsize_t len\f[], \fIint options\f[])
 
 .PP
-Convert \f[I]text\f[] (assumed to be a UTF\-8 encoded string with length
-\f[I]len\f[]) from CommonMark Markdown to HTML, returning a
-null\-terminated, UTF\-8\-encoded string. It is the caller's
+Convert \f[I]text\f[] (assumed to be a UTF\-8 encoded string with
+length \f[I]len\f[]) from CommonMark Markdown to HTML, returning
+a null\-terminated, UTF\-8\-encoded string. It is the caller's
 responsibility to free the returned buffer.
 
 .SS
@@ -108,18 +109,18 @@ typedef struct cmark_mem {
 .fi
 
 .PP
-Defines the memory allocation functions to be used by CMark when parsing
-and allocating a document tree
+Defines the memory allocation functions to be used by CMark when
+parsing and allocating a document tree
 
 .PP
-\fIcmark_mem *\f[] \fBcmark_get_default_mem_allocator\f[](\fI\f[])
+\fIcmark_mem *\f[] \fBcmark_get_default_mem_allocator\f[](\fIvoid\f[])
 
 .PP
-The default memory allocator; uses the system's calloc, realloc and
-free.
+The default memory allocator; uses the system's calloc, realloc
+and free.
 
 .PP
-\fIcmark_mem *\f[] \fBcmark_get_arena_mem_allocator\f[](\fI\f[])
+\fIcmark_mem *\f[] \fBcmark_get_arena_mem_allocator\f[](\fIvoid\f[])
 
 .PP
 An arena allocator; uses system calloc to allocate large slabs of
@@ -129,8 +130,8 @@ memory. Memory in these slabs is not reused at all.
 \fIvoid\f[] \fBcmark_arena_reset\f[](\fIvoid\f[])
 
 .PP
-Resets the arena allocator, quickly returning all used memory to the
-operating system.
+Resets the arena allocator, quickly returning all used memory to
+the operating system.
 
 .PP
 \fItypedef\f[] \fBvoid\f[](\fI*cmark_free_func\f[])
@@ -161,15 +162,15 @@ A generic singly linked list.
 \fIcmark_llist *\f[] \fBcmark_llist_append\f[](\fIcmark_mem         * mem\f[], \fIcmark_llist       * head\f[], \fIvoid              * data\f[])
 
 .PP
-Append an element to the linked list, return the possibly modified head
-of the list.
+Append an element to the linked list, return the possibly
+modified head of the list.
 
 .PP
 \fIvoid\f[] \fBcmark_llist_free_full\f[](\fIcmark_mem         * mem\f[], \fIcmark_llist       * head\f[], \fIcmark_free_func     free_func\f[])
 
 .PP
-Free the list starting with \f[I]head\f[], calling \f[I]free_func\f[]
-with the data pointer of each of its elements
+Free the list starting with \f[I]head\f[], calling
+\f[I]free_func\f[] with the data pointer of each of its elements
 
 .PP
 \fIvoid\f[] \fBcmark_llist_free\f[](\fIcmark_mem         * mem\f[], \fIcmark_llist       * head\f[])
@@ -184,17 +185,18 @@ Creating and Destroying Nodes
 \fIcmark_node *\f[] \fBcmark_node_new\f[](\fIcmark_node_type type\f[])
 
 .PP
-Creates a new node of type \f[I]type\f[]. Note that the node may have
-other required properties, which it is the caller's responsibility to
-assign.
+Creates a new node of type \f[I]type\f[]. Note that the node may
+have other required properties, which it is the caller's
+responsibility to assign.
 
 .PP
 \fIcmark_node *\f[] \fBcmark_node_new_with_mem\f[](\fIcmark_node_type type\f[], \fIcmark_mem *mem\f[])
 
 .PP
-Same as \f[C]cmark_node_new\f[], but explicitly listing the memory
-allocator used to allocate the node. Note: be sure to use the same
-allocator for every node in a tree, or bad things can happen.
+Same as \f[C]cmark_node_new\f[], but explicitly listing the
+memory allocator used to allocate the node. Note: be sure to use
+the same allocator for every node in a tree, or bad things can
+happen.
 
 .PP
 \fIvoid\f[] \fBcmark_node_free\f[](\fIcmark_node *node\f[])
@@ -209,15 +211,15 @@ Tree Traversal
 \fIcmark_node *\f[] \fBcmark_node_next\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the next node in the sequence after \f[I]node\f[], or NULL if
-there is none.
+Returns the next node in the sequence after \f[I]node\f[], or
+NULL if there is none.
 
 .PP
 \fIcmark_node *\f[] \fBcmark_node_previous\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the previous node in the sequence after \f[I]node\f[], or NULL
-if there is none.
+Returns the previous node in the sequence after \f[I]node\f[], or
+NULL if there is none.
 
 .PP
 \fIcmark_node *\f[] \fBcmark_node_parent\f[](\fIcmark_node *node\f[])
@@ -229,31 +231,40 @@ Returns the parent of \f[I]node\f[], or NULL if there is none.
 \fIcmark_node *\f[] \fBcmark_node_first_child\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the first child of \f[I]node\f[], or NULL if \f[I]node\f[] has
-no children.
+Returns the first child of \f[I]node\f[], or NULL if
+\f[I]node\f[] has no children.
 
 .PP
 \fIcmark_node *\f[] \fBcmark_node_last_child\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the last child of \f[I]node\f[], or NULL if \f[I]node\f[] has no
-children.
+Returns the last child of \f[I]node\f[], or NULL if \f[I]node\f[]
+has no children.
+
+.PP
+\fIcmark_node *\f[] \fBcmark_node_parent_footnote_def\f[](\fIcmark_node *node\f[])
+
+.PP
+Returns the footnote reference of \f[I]node\f[], or NULL if
+\f[I]node\f[] doesn't have a footnote reference.
 
 .SS
 Iterator
 .PP
-An iterator will walk through a tree of nodes, starting from a root
-node, returning one node at a time, together with information about
-whether the node is being entered or exited. The iterator will first
-descend to a child node, if there is one. When there is no child, the
-iterator will go to the next sibling. When there is no next sibling, the
-iterator will return to the parent (but with a \f[I]cmark_event_type\f[]
-of \f[C]CMARK_EVENT_EXIT\f[]). The iterator will return
-\f[C]CMARK_EVENT_DONE\f[] when it reaches the root node again. One
-natural application is an HTML renderer, where an \f[C]ENTER\f[] event
-outputs an open tag and an \f[C]EXIT\f[] event outputs a close tag. An
-iterator might also be used to transform an AST in some systematic way,
-for example, turning all level\-3 headings into regular paragraphs.
+An iterator will walk through a tree of nodes, starting from a
+root node, returning one node at a time, together with
+information about whether the node is being entered or exited.
+The iterator will first descend to a child node, if there is one.
+When there is no child, the iterator will go to the next sibling.
+When there is no next sibling, the iterator will return to the
+parent (but with a \f[I]cmark_event_type\f[] of
+\f[C]CMARK_EVENT_EXIT\f[]). The iterator will return
+\f[C]CMARK_EVENT_DONE\f[] when it reaches the root node again.
+One natural application is an HTML renderer, where an
+\f[C]ENTER\f[] event outputs an open tag and an \f[C]EXIT\f[]
+event outputs a close tag. An iterator might also be used to
+transform an AST in some systematic way, for example, turning all
+level\-3 headings into regular paragraphs.
 .IP
 .nf
 \f[C]
@@ -272,8 +283,8 @@ usage_example(cmark_node *root) {
 \f[]
 .fi
 .PP
-Iterators will never return \f[C]EXIT\f[] events for leaf nodes, which
-are nodes of type:
+Iterators will never return \f[C]EXIT\f[] events for leaf nodes,
+which are nodes of type:
 .IP \[bu] 2
 CMARK_NODE_HTML_BLOCK
 .IP \[bu] 2
@@ -314,10 +325,11 @@ typedef enum {
 \fIcmark_iter *\f[] \fBcmark_iter_new\f[](\fIcmark_node *root\f[])
 
 .PP
-Creates a new iterator starting at \f[I]root\f[]. The current node and
-event type are undefined until \f[I]cmark_iter_next\f[] is called for
-the first time. The memory allocated for the iterator should be released
-using \f[I]cmark_iter_free\f[] when it is no longer needed.
+Creates a new iterator starting at \f[I]root\f[]. The current
+node and event type are undefined until \f[I]cmark_iter_next\f[]
+is called for the first time. The memory allocated for the
+iterator should be released using \f[I]cmark_iter_free\f[] when
+it is no longer needed.
 
 .PP
 \fIvoid\f[] \fBcmark_iter_free\f[](\fIcmark_iter *iter\f[])
@@ -355,9 +367,9 @@ Returns the root node.
 \fIvoid\f[] \fBcmark_iter_reset\f[](\fIcmark_iter *iter\f[], \fIcmark_node *current\f[], \fIcmark_event_type event_type\f[])
 
 .PP
-Resets the iterator so that the current node is \f[I]current\f[] and the
-event type is \f[I]event_type\f[]. The new current node must be a
-descendant of the root node or the root node itself.
+Resets the iterator so that the current node is \f[I]current\f[]
+and the event type is \f[I]event_type\f[]. The new current node
+must be a descendant of the root node or the root node itself.
 
 .SS
 Accessors
@@ -372,8 +384,8 @@ Returns the user data of \f[I]node\f[].
 \fIint\f[] \fBcmark_node_set_user_data\f[](\fIcmark_node *node\f[], \fIvoid *user_data\f[])
 
 .PP
-Sets arbitrary user data for \f[I]node\f[]. Returns 1 on success, 0 on
-failure.
+Sets arbitrary user data for \f[I]node\f[]. Returns 1 on success,
+0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_set_user_data_free_func\f[](\fIcmark_node *node\f[], \fIcmark_free_func free_func\f[])
@@ -385,57 +397,58 @@ Set free function for user data */
 \fIcmark_node_type\f[] \fBcmark_node_get_type\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the type of \f[I]node\f[], or \f[C]CMARK_NODE_NONE\f[] on error.
+Returns the type of \f[I]node\f[], or \f[C]CMARK_NODE_NONE\f[] on
+error.
 
 .PP
 \fIconst char *\f[] \fBcmark_node_get_type_string\f[](\fIcmark_node *node\f[])
 
 .PP
-Like \f[I]cmark_node_get_type\f[], but returns a string representation
-of the type, or \f[C]"<unknown>"\f[].
+Like \f[I]cmark_node_get_type\f[], but returns a string
+representation of the type, or \f[C]"<unknown>"\f[].
 
 .PP
 \fIconst char *\f[] \fBcmark_node_get_literal\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the string contents of \f[I]node\f[], or an empty string if none
-is set. Returns NULL if called on a node that does not have string
-content.
+Returns the string contents of \f[I]node\f[], or an empty string
+if none is set. Returns NULL if called on a node that does not
+have string content.
 
 .PP
 \fIint\f[] \fBcmark_node_set_literal\f[](\fIcmark_node *node\f[], \fIconst char *content\f[])
 
 .PP
-Sets the string contents of \f[I]node\f[]. Returns 1 on success, 0 on
-failure.
+Sets the string contents of \f[I]node\f[]. Returns 1 on success,
+0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_get_heading_level\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the heading level of \f[I]node\f[], or 0 if \f[I]node\f[] is not
-a heading.
+Returns the heading level of \f[I]node\f[], or 0 if \f[I]node\f[]
+is not a heading.
 
 .PP
 \fIint\f[] \fBcmark_node_set_heading_level\f[](\fIcmark_node *node\f[], \fIint level\f[])
 
 .PP
-Sets the heading level of \f[I]node\f[], returning 1 on success and 0 on
-error.
+Sets the heading level of \f[I]node\f[], returning 1 on success
+and 0 on error.
 
 .PP
 \fIcmark_list_type\f[] \fBcmark_node_get_list_type\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the list type of \f[I]node\f[], or \f[C]CMARK_NO_LIST\f[] if
-\f[I]node\f[] is not a list.
+Returns the list type of \f[I]node\f[], or \f[C]CMARK_NO_LIST\f[]
+if \f[I]node\f[] is not a list.
 
 .PP
 \fIint\f[] \fBcmark_node_set_list_type\f[](\fIcmark_node *node\f[], \fIcmark_list_type type\f[])
 
 .PP
-Sets the list type of \f[I]node\f[], returning 1 on success and 0 on
-error.
+Sets the list type of \f[I]node\f[], returning 1 on success and 0
+on error.
 
 .PP
 \fIcmark_delim_type\f[] \fBcmark_node_get_list_delim\f[](\fIcmark_node *node\f[])
@@ -448,15 +461,15 @@ Returns the list delimiter type of \f[I]node\f[], or
 \fIint\f[] \fBcmark_node_set_list_delim\f[](\fIcmark_node *node\f[], \fIcmark_delim_type delim\f[])
 
 .PP
-Sets the list delimiter type of \f[I]node\f[], returning 1 on success
-and 0 on error.
+Sets the list delimiter type of \f[I]node\f[], returning 1 on
+success and 0 on error.
 
 .PP
 \fIint\f[] \fBcmark_node_get_list_start\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns starting number of \f[I]node\f[], if it is an ordered list,
-otherwise 0.
+Returns starting number of \f[I]node\f[], if it is an ordered
+list, otherwise 0.
 
 .PP
 \fIint\f[] \fBcmark_node_set_list_start\f[](\fIcmark_node *node\f[], \fIint start\f[])
@@ -475,7 +488,23 @@ Returns 1 if \f[I]node\f[] is a tight list, 0 otherwise.
 \fIint\f[] \fBcmark_node_set_list_tight\f[](\fIcmark_node *node\f[], \fIint tight\f[])
 
 .PP
-Sets the "tightness" of a list. Returns 1 on success, 0 on failure.
+Sets the "tightness" of a list. Returns 1 on success, 0 on
+failure.
+
+.PP
+\fIint\f[] \fBcmark_node_get_item_index\f[](\fIcmark_node *node\f[])
+
+.PP
+Returns item index of \f[I]node\f[]. This is only used when
+rendering output formats such as commonmark, which need to output
+the index. It is not required for formats such as html or latex.
+
+.PP
+\fIint\f[] \fBcmark_node_set_item_index\f[](\fIcmark_node *node\f[], \fIint idx\f[])
+
+.PP
+Sets item index of \f[I]node\f[]. Returns 1 on success, 0 on
+failure.
 
 .PP
 \fIconst char *\f[] \fBcmark_node_get_fence_info\f[](\fIcmark_node *node\f[])
@@ -487,8 +516,8 @@ Returns the info string from a fenced code block.
 \fIint\f[] \fBcmark_node_set_fence_info\f[](\fIcmark_node *node\f[], \fIconst char *info\f[])
 
 .PP
-Sets the info string in a fenced code block, returning 1 on success
-and 0 on failure.
+Sets the info string in a fenced code block, returning 1 on
+success and 0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_set_fenced\f[](\fIcmark_node * node\f[], \fIint fenced\f[], \fIint length\f[], \fIint offset\f[], \fIchar character\f[])
@@ -506,63 +535,63 @@ Returns code blocks fencing details
 \fIconst char *\f[] \fBcmark_node_get_url\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the URL of a link or image \f[I]node\f[], or an empty string if
-no URL is set. Returns NULL if called on a node that is not a link or
-image.
+Returns the URL of a link or image \f[I]node\f[], or an empty
+string if no URL is set. Returns NULL if called on a node that is
+not a link or image.
 
 .PP
 \fIint\f[] \fBcmark_node_set_url\f[](\fIcmark_node *node\f[], \fIconst char *url\f[])
 
 .PP
-Sets the URL of a link or image \f[I]node\f[]. Returns 1 on success, 0
-on failure.
+Sets the URL of a link or image \f[I]node\f[]. Returns 1 on
+success, 0 on failure.
 
 .PP
 \fIconst char *\f[] \fBcmark_node_get_title\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the title of a link or image \f[I]node\f[], or an empty string
-if no title is set. Returns NULL if called on a node that is not a link
-or image.
+Returns the title of a link or image \f[I]node\f[], or an empty
+string if no title is set. Returns NULL if called on a node that
+is not a link or image.
 
 .PP
 \fIint\f[] \fBcmark_node_set_title\f[](\fIcmark_node *node\f[], \fIconst char *title\f[])
 
 .PP
-Sets the title of a link or image \f[I]node\f[]. Returns 1 on success, 0
-on failure.
+Sets the title of a link or image \f[I]node\f[]. Returns 1 on
+success, 0 on failure.
 
 .PP
 \fIconst char *\f[] \fBcmark_node_get_on_enter\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the literal "on enter" text for a custom \f[I]node\f[], or an
-empty string if no on_enter is set. Returns NULL if called on a
-non\-custom node.
+Returns the literal "on enter" text for a custom \f[I]node\f[],
+or an empty string if no on_enter is set. Returns NULL if called
+on a non\-custom node.
 
 .PP
 \fIint\f[] \fBcmark_node_set_on_enter\f[](\fIcmark_node *node\f[], \fIconst char *on_enter\f[])
 
 .PP
-Sets the literal text to render "on enter" for a custom \f[I]node\f[].
-Any children of the node will be rendered after this text. Returns 1 on
-success 0 on failure.
+Sets the literal text to render "on enter" for a custom
+\f[I]node\f[]. Any children of the node will be rendered after
+this text. Returns 1 on success 0 on failure.
 
 .PP
 \fIconst char *\f[] \fBcmark_node_get_on_exit\f[](\fIcmark_node *node\f[])
 
 .PP
-Returns the literal "on exit" text for a custom \f[I]node\f[], or an
-empty string if no on_exit is set. Returns NULL if called on a
+Returns the literal "on exit" text for a custom \f[I]node\f[], or
+an empty string if no on_exit is set. Returns NULL if called on a
 non\-custom node.
 
 .PP
 \fIint\f[] \fBcmark_node_set_on_exit\f[](\fIcmark_node *node\f[], \fIconst char *on_exit\f[])
 
 .PP
-Sets the literal text to render "on exit" for a custom \f[I]node\f[].
-Any children of the node will be rendered before this text. Returns 1 on
-success 0 on failure.
+Sets the literal text to render "on exit" for a custom
+\f[I]node\f[]. Any children of the node will be rendered before
+this text. Returns 1 on success 0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_get_start_line\f[](\fIcmark_node *node\f[])
@@ -595,37 +624,37 @@ Tree Manipulation
 \fIvoid\f[] \fBcmark_node_unlink\f[](\fIcmark_node *node\f[])
 
 .PP
-Unlinks a \f[I]node\f[], removing it from the tree, but not freeing its
-memory. (Use \f[I]cmark_node_free\f[] for that.)
+Unlinks a \f[I]node\f[], removing it from the tree, but not
+freeing its memory. (Use \f[I]cmark_node_free\f[] for that.)
 
 .PP
 \fIint\f[] \fBcmark_node_insert_before\f[](\fIcmark_node *node\f[], \fIcmark_node *sibling\f[])
 
 .PP
-Inserts \f[I]sibling\f[] before \f[I]node\f[]. Returns 1 on success, 0
-on failure.
+Inserts \f[I]sibling\f[] before \f[I]node\f[]. Returns 1 on
+success, 0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_insert_after\f[](\fIcmark_node *node\f[], \fIcmark_node *sibling\f[])
 
 .PP
-Inserts \f[I]sibling\f[] after \f[I]node\f[]. Returns 1 on success, 0 on
-failure.
+Inserts \f[I]sibling\f[] after \f[I]node\f[]. Returns 1 on
+success, 0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_replace\f[](\fIcmark_node *oldnode\f[], \fIcmark_node *newnode\f[])
 
 .PP
 Replaces \f[I]oldnode\f[] with \f[I]newnode\f[] and unlinks
-\f[I]oldnode\f[] (but does not free its memory). Returns 1 on success, 0
-on failure.
+\f[I]oldnode\f[] (but does not free its memory). Returns 1 on
+success, 0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_prepend_child\f[](\fIcmark_node *node\f[], \fIcmark_node *child\f[])
 
 .PP
-Adds \f[I]child\f[] to the beginning of the children of \f[I]node\f[].
-Returns 1 on success, 0 on failure.
+Adds \f[I]child\f[] to the beginning of the children of
+\f[I]node\f[]. Returns 1 on success, 0 on failure.
 
 .PP
 \fIint\f[] \fBcmark_node_append_child\f[](\fIcmark_node *node\f[], \fIcmark_node *child\f[])
@@ -705,22 +734,149 @@ Feeds a string of length \f[I]len\f[] to \f[I]parser\f[].
 .PP
 Finish parsing and return a pointer to a tree of nodes.
 
+.SS
+Streaming AST API
+.PP
+The functions below let a caller obtain a usable AST
+\f[I]while\f[] feeding input incrementally \[em] without calling
+\f[C]cmark_parser_finish\f[]. The intended use case is rendering
+markdown that is itself being produced incrementally (e.g. tokens
+from a language model).
+.PP
+Two correctness guarantees apply at all times:
+.IP "1." 4
+\f[B]Convergence.\f[] For any byte prefix \f[C]B_k\f[] of the
+eventual input, the tree returned by
+\f[C]cmark_parser_snapshot\f[] after \f[C]feed(B_k)\f[] is
+structurally equivalent to what \f[C]cmark_parse_document(B_k,
+...)\f[] would have produced \[em] the same blocks, the same
+inlines, the same reference resolutions \[em] modulo the
+provisional flags described below and modulo footnote reference
+numbering, which is finalized only by
+\f[C]cmark_parser_finish\f[].
+.IP "2." 4
+\f[B]Monotonic prefix.\f[] The portion of the tree before
+\f[C]cmark_parser_commit_frontier\f[] is final. Subsequent input
+never alters committed nodes (their pointers, types, children, or
+content). The portion of the tree after the commit frontier may
+be mutated in place as later input disambiguates earlier
+interpretations (paragraph → setext heading, paragraph → table
+head, unclosed emphasis → emphasis, etc.). When this happens the
+parser rewrites nodes in place and emits change records \[em]
+pointer identity is preserved across morph.
+.PP
+Nodes that may still change carry
+\f[C]cmark_node_is_provisional() == 1\f[].
+
+.PP
+\fIint\f[] \fBcmark_node_is_provisional\f[](\fIcmark_node *node\f[])
+
+.PP
+Returns 1 if \f[C]node\f[] is provisional \[em] i.e. the parser
+may still rewrite it as more input arrives. Returns 0 for
+committed nodes and for any node in a tree obtained from
+\f[C]cmark_parser_finish\f[].
+
+.PP
+\fIcmark_node *\f[] \fBcmark_parser_snapshot\f[](\fIcmark_parser *parser\f[])
+
+.PP
+Returns the current document tree without finalizing the parser.
+The returned root is owned by the parser and remains valid until
+the next call to \f[C]cmark_parser_feed\f[],
+\f[C]cmark_parser_snapshot\f[], or \f[C]cmark_parser_finish\f[].
+.PP
+Triggers incremental inline parsing on any blocks marked dirty
+since the last snapshot, so that inlines (emphasis, code spans,
+links, etc.) are present in the returned tree \[em] including a
+tentative best\-effort interpretation of trailing unclosed
+delimiters in still\-open blocks.
+
+.PP
+\fIsize_t\f[] \fBcmark_parser_commit_frontier\f[](\fIcmark_parser *parser\f[])
+
+.PP
+Returns the byte offset into the consumed input stream before
+which the AST is committed and will not change. Always
+non\-decreasing across successive calls within one parser
+lifetime.
+
+.PP
+.nf
+\fC
+.RS 0n
+typedef struct cmark_change_iter cmark_change_iter;
+.RE
+\f[]
+.fi
+
+.PP
+Opaque iterator over change records since the last call to
+\f[C]cmark_parser_changes_since_last_snapshot\f[] (or since
+parser creation). Calling this function consumes the recorded
+events; a second immediate call returns an empty iterator.
+
+.PP
+.nf
+\fC
+.RS 0n
+typedef enum {
+  CMARK_CHANGE_NONE = 0,
+  /** A new node was attached to the tree.
+   */
+  CMARK_CHANGE_NODE_ADDED,
+  /** A node was detached and freed. The pointer in the change record is the
+   * parent of the removed node (the removed node itself is no longer valid).
+   */
+  CMARK_CHANGE_NODE_REMOVED,
+  /** A node's `type` (and possibly its `as` payload) was rewritten in place.
+   * Pointer identity preserved.
+   */
+  CMARK_CHANGE_NODE_RETYPED,
+  /** A node's textual content (for blocks: the raw `content` buffer) was
+   * appended to.
+   */
+  CMARK_CHANGE_NODE_CONTENT_UPDATED,
+  /** A node's inline children were re-parsed. Old inline children may have
+   * been replaced.
+   */
+  CMARK_CHANGE_NODE_INLINES_REPARSED,
+  /** A node's `CMARK_NODE__PROVISIONAL` flag was cleared — i.e. it is now
+   * committed.
+   */
+  CMARK_CHANGE_NODE_FINALIZED,
+} cmark_change_event;
+.RE
+\f[]
+.fi
+
+
+
+.PP
+\fIcmark_change_event\f[] \fBcmark_change_iter_next\f[](\fIcmark_change_iter *iter\f[], \fIcmark_node **out_node\f[])
+
+.PP
+Advances the iterator. On return, *out_node is the affected node
+(or its parent for REMOVED). Returns CMARK_CHANGE_NONE when
+exhausted.
+
 .PP
 \fIcmark_node *\f[] \fBcmark_parse_document\f[](\fIconst char *buffer\f[], \fIsize_t len\f[], \fIint options\f[])
 
 .PP
-Parse a CommonMark document in \f[I]buffer\f[] of length \f[I]len\f[].
-Returns a pointer to a tree of nodes. The memory allocated for the node
-tree should be released using \f[I]cmark_node_free\f[] when it is no
-longer needed.
+Parse a CommonMark document in \f[I]buffer\f[] of length
+\f[I]len\f[]. Returns a pointer to a tree of nodes. The memory
+allocated for the node tree should be released using
+\f[I]cmark_node_free\f[] when it is no longer needed.
 
 .PP
 \fIcmark_node *\f[] \fBcmark_parse_file\f[](\fIFILE *f\f[], \fIint options\f[])
 
 .PP
-Parse a CommonMark document in file \f[I]f\f[], returning a pointer to a
-tree of nodes. The memory allocated for the node tree should be released
-using \f[I]cmark_node_free\f[] when it is no longer needed.
+Parse a CommonMark document in file \f[I]f\f[], returning a
+pointer to a tree of nodes. The memory allocated for the node
+tree should be released using \f[I]cmark_node_free\f[] when it is
+no longer needed.
 
 .SS
 Rendering
@@ -729,86 +885,87 @@ Rendering
 \fIchar *\f[] \fBcmark_render_xml\f[](\fIcmark_node *root\f[], \fIint options\f[])
 
 .PP
-Render a \f[I]node\f[] tree as XML. It is the caller's responsibility to
-free the returned buffer.
+Render a \f[I]node\f[] tree as XML. It is the caller's
+responsibility to free the returned buffer.
 
 .PP
 \fIchar *\f[] \fBcmark_render_xml_with_mem\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIcmark_mem *mem\f[])
 
 .PP
-As for \f[I]cmark_render_xml\f[], but specifying the allocator to use
-for the resulting string.
+As for \f[I]cmark_render_xml\f[], but specifying the allocator to
+use for the resulting string.
 
 .PP
 \fIchar *\f[] \fBcmark_render_html\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIcmark_llist *extensions\f[])
 
 .PP
-Render a \f[I]node\f[] tree as an HTML fragment. It is up to the user to
-add an appropriate header and footer. It is the caller's responsibility
-to free the returned buffer.
+Render a \f[I]node\f[] tree as an HTML fragment. It is up to the
+user to add an appropriate header and footer. It is the caller's
+responsibility to free the returned buffer.
 
 .PP
 \fIchar *\f[] \fBcmark_render_html_with_mem\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIcmark_llist *extensions\f[], \fIcmark_mem *mem\f[])
 
 .PP
-As for \f[I]cmark_render_html\f[], but specifying the allocator to use
-for the resulting string.
+As for \f[I]cmark_render_html\f[], but specifying the allocator
+to use for the resulting string.
 
 .PP
 \fIchar *\f[] \fBcmark_render_man\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[])
 
 .PP
-Render a \f[I]node\f[] tree as a groff man page, without the header. It
-is the caller's responsibility to free the returned buffer.
+Render a \f[I]node\f[] tree as a groff man page, without the
+header. It is the caller's responsibility to free the returned
+buffer.
 
 .PP
 \fIchar *\f[] \fBcmark_render_man_with_mem\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[], \fIcmark_mem *mem\f[])
 
 .PP
-As for \f[I]cmark_render_man\f[], but specifying the allocator to use
-for the resulting string.
+As for \f[I]cmark_render_man\f[], but specifying the allocator to
+use for the resulting string.
 
 .PP
 \fIchar *\f[] \fBcmark_render_commonmark\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[])
 
 .PP
-Render a \f[I]node\f[] tree as a commonmark document. It is the caller's
-responsibility to free the returned buffer.
+Render a \f[I]node\f[] tree as a commonmark document. It is the
+caller's responsibility to free the returned buffer.
 
 .PP
 \fIchar *\f[] \fBcmark_render_commonmark_with_mem\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[], \fIcmark_mem *mem\f[])
 
 .PP
-As for \f[I]cmark_render_commonmark\f[], but specifying the allocator to
-use for the resulting string.
+As for \f[I]cmark_render_commonmark\f[], but specifying the
+allocator to use for the resulting string.
 
 .PP
 \fIchar *\f[] \fBcmark_render_plaintext\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[])
 
 .PP
-Render a \f[I]node\f[] tree as a plain text document. It is the caller's
-responsibility to free the returned buffer.
+Render a \f[I]node\f[] tree as a plain text document. It is the
+caller's responsibility to free the returned buffer.
 
 .PP
 \fIchar *\f[] \fBcmark_render_plaintext_with_mem\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[], \fIcmark_mem *mem\f[])
 
 .PP
-As for \f[I]cmark_render_plaintext\f[], but specifying the allocator to
-use for the resulting string.
+As for \f[I]cmark_render_plaintext\f[], but specifying the
+allocator to use for the resulting string.
 
 .PP
 \fIchar *\f[] \fBcmark_render_latex\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[])
 
 .PP
-Render a \f[I]node\f[] tree as a LaTeX document. It is the caller's
-responsibility to free the returned buffer.
+Render a \f[I]node\f[] tree as a LaTeX document. It is the
+caller's responsibility to free the returned buffer.
 
 .PP
 \fIchar *\f[] \fBcmark_render_latex_with_mem\f[](\fIcmark_node *root\f[], \fIint options\f[], \fIint width\f[], \fIcmark_mem *mem\f[])
 
 .PP
-As for \f[I]cmark_render_latex\f[], but specifying the allocator to use
-for the resulting string.
+As for \f[I]cmark_render_latex\f[], but specifying the allocator
+to use for the resulting string.
 
 .SS
 Options
@@ -838,7 +995,8 @@ Options affecting rendering
 .fi
 
 .PP
-Include a \f[C]data\-sourcepos\f[] attribute on all block elements.
+Include a \f[C]data\-sourcepos\f[] attribute on all block
+elements.
 
 .PP
 .nf
@@ -862,9 +1020,9 @@ Render \f[C]softbreak\f[] elements as hard line breaks.
 .fi
 
 .PP
-\f[C]CMARK_OPT_SAFE\f[] is defined here for API compatibility, but it no
-longer has any effect. "Safe" mode is now the default: set
-\f[C]CMARK_OPT_UNSAFE\f[] to disable it.
+\f[C]CMARK_OPT_SAFE\f[] is defined here for API compatibility,
+but it no longer has any effect. "Safe" mode is now the default:
+set \f[C]CMARK_OPT_UNSAFE\f[] to disable it.
 
 .PP
 .nf
@@ -877,10 +1035,11 @@ longer has any effect. "Safe" mode is now the default: set
 
 .PP
 Render raw HTML and unsafe links (\f[C]javascript:\f[],
-\f[C]vbscript:\f[], \f[C]file:\f[], and \f[C]data:\f[], except for
-\f[C]image/png\f[], \f[C]image/gif\f[], \f[C]image/jpeg\f[], or
-\f[C]image/webp\f[] mime types). By default, raw HTML is replaced by a
-placeholder HTML comment. Unsafe links are replaced by empty strings.
+\f[C]vbscript:\f[], \f[C]file:\f[], and \f[C]data:\f[], except
+for \f[C]image/png\f[], \f[C]image/gif\f[], \f[C]image/jpeg\f[],
+or \f[C]image/webp\f[] mime types). By default, raw HTML is
+replaced by a placeholder HTML comment. Unsafe links are replaced
+by empty strings.
 
 .PP
 .nf
@@ -919,8 +1078,8 @@ Legacy option (no effect).
 .fi
 
 .PP
-Validate UTF\-8 in the input before parsing, replacing illegal sequences
-with the replacement character U+FFFD.
+Validate UTF\-8 in the input before parsing, replacing illegal
+sequences with the replacement character U+FFFD.
 
 .PP
 .nf
@@ -981,8 +1140,8 @@ Parse footnotes.
 .fi
 
 .PP
-Only parse strikethroughs if surrounded by exactly 2 tildes. Gives some
-compatibility with redcarpet.
+Only parse strikethroughs if surrounded by exactly 2 tildes.
+Gives some compatibility with redcarpet.
 
 .PP
 .nf
@@ -994,7 +1153,8 @@ compatibility with redcarpet.
 .fi
 
 .PP
-Use style attributes to align table cells instead of align attributes.
+Use style attributes to align table cells instead of align
+attributes.
 
 .PP
 .nf
@@ -1006,8 +1166,8 @@ Use style attributes to align table cells instead of align attributes.
 .fi
 
 .PP
-Include the remainder of the info string in code blocks in a separate
-attribute.
+Include the remainder of the info string in code blocks in a
+separate attribute.
 
 .SS
 Version information
@@ -1016,8 +1176,8 @@ Version information
 \fIint\f[] \fBcmark_version\f[](\fIvoid\f[])
 
 .PP
-The library version as integer for runtime checks. Also available as
-macro CMARK_VERSION for compile time checks.
+The library version as integer for runtime checks. Also available
+as macro CMARK_VERSION for compile time checks.
 .IP \[bu] 2
 Bits 16\-23 contain the major version.
 .IP \[bu] 2
@@ -1025,14 +1185,15 @@ Bits 8\-15 contain the minor version.
 .IP \[bu] 2
 Bits 0\-7 contain the patchlevel.
 .PP
-In hexadecimal format, the number 0x010203 represents version 1.2.3.
+In hexadecimal format, the number 0x010203 represents
+version 1.2.3.
 
 .PP
 \fIconst char *\f[] \fBcmark_version_string\f[](\fIvoid\f[])
 
 .PP
-The library version string for runtime checks. Also available as macro
-CMARK_VERSION_STRING for compile time checks.
+The library version string for runtime checks. Also available as
+macro CMARK_VERSION_STRING for compile time checks.
 
 .SH
 AUTHORS

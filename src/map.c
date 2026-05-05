@@ -51,8 +51,22 @@ refsearch(const void *label, const void *p2) {
 }
 
 static void sort_map(cmark_map *map) {
-  size_t i = 0, last = 0, size = map->size;
+  size_t i = 0, last = 0;
   cmark_map_entry *r = map->refs, **sorted = NULL;
+
+  // Count the actual list length. We can't trust map->size here: a previous
+  // sort_map run may have stored the post-dedup count there, and streaming
+  // re-sorts (after refs are added between lookups) need the true length to
+  // size the allocation correctly.
+  size_t size = 0;
+  for (cmark_map_entry *q = map->refs; q; q = q->next)
+    size++;
+
+  if (size == 0) {
+    map->sorted = NULL;
+    map->size = 0;
+    return;
+  }
 
   sorted = (cmark_map_entry **)map->mem->calloc(size, sizeof(cmark_map_entry *));
   while (r) {

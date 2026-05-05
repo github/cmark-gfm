@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "node.h"
+#include "streaming.h"
 #include "syntax_extension.h"
 
 /**
@@ -233,6 +234,34 @@ int cmark_node_set_type(cmark_node * node, cmark_node_type type) {
 
   node->type = (uint16_t)type;
 
+  // If the new type cannot contain some of the existing children (e.g.
+  // paragraph -> table: inline TEXT children are not valid table content),
+  // free those children. This makes set_type safe to call even when the
+  // source type was already populated by a streaming inline-parse pass.
+  {
+    cmark_node *child = node->first_child;
+    while (child) {
+      cmark_node *next = child->next;
+      if (!cmark_node_can_contain_type(node, (cmark_node_type)child->type)) {
+        cmark_node_free(child);
+      }
+      child = next;
+    }
+  }
+
+  // Streaming: if a parser is currently driving this thread, the in-place
+  // type change is part of incremental disambiguation (e.g. paragraph ->
+  // setext heading, paragraph -> table). Emit a change event so
+  // consumers of cmark_parser_changes_since_last_snapshot can see the
+  // rewrite. Pointer identity is preserved by design — that's the whole
+  // point of using set_type rather than replacing the node.
+  {
+    cmark_parser *active = cmark_streaming_active_parser();
+    if (active) {
+      cmark_streaming_record(active, CMARK_CHANGE_NODE_RETYPED, node);
+    }
+  }
+
   return 1;
 }
 
@@ -421,6 +450,17 @@ const char *cmark_node_get_string_content(cmark_node *node) {
 
 int cmark_node_set_string_content(cmark_node *node, const char *content) {
   cmark_strbuf_sets(&node->content, content);
+  // Streaming: mark inline state stale so it is re-parsed on the next
+  // snapshot/finalize. Used by extensions (e.g. table cells written via
+  // this entry point). The contains_inlines mirror lives on extensions or
+  // the core block-type set; we conservatively mark and let the inline-run
+  // pass decide whether re-parse is meaningful.
+  {
+    cmark_parser *active = cmark_streaming_active_parser();
+    if (active) {
+      cmark_streaming_mark_inline_dirty(active, node);
+    }
+  }
   return true;
 }
 

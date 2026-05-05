@@ -594,6 +594,109 @@ void cmark_parser_feed(cmark_parser *parser, const char *buffer, size_t len);
 CMARK_GFM_EXPORT
 cmark_node *cmark_parser_finish(cmark_parser *parser);
 
+/**
+ * ## Streaming AST API
+ *
+ * The functions below let a caller obtain a usable AST *while* feeding input
+ * incrementally — without calling `cmark_parser_finish`. The intended use case
+ * is rendering markdown that is itself being produced incrementally (e.g.
+ * tokens from a language model).
+ *
+ * Two correctness guarantees apply at all times:
+ *
+ *   1. **Convergence.** For any byte prefix `B_k` of the eventual input, the
+ *      tree returned by `cmark_parser_snapshot` after `feed(B_k)` is
+ *      structurally equivalent to what `cmark_parse_document(B_k, ...)` would
+ *      have produced — the same blocks, the same inlines, the same reference
+ *      resolutions — modulo the provisional flags described below and modulo
+ *      footnote reference numbering, which is finalized only by
+ *      `cmark_parser_finish`.
+ *
+ *   2. **Monotonic prefix.** The portion of the tree before
+ *      `cmark_parser_commit_frontier` is final. Subsequent input never alters
+ *      committed nodes (their pointers, types, children, or content). The
+ *      portion of the tree after the commit frontier may be mutated in place
+ *      as later input disambiguates earlier interpretations (paragraph →
+ *      setext heading, paragraph → table head, unclosed emphasis → emphasis,
+ *      etc.). When this happens the parser rewrites nodes in place and emits
+ *      change records — pointer identity is preserved across morph.
+ *
+ * Nodes that may still change carry `cmark_node_is_provisional() == 1`.
+ */
+
+/** Returns 1 if `node` is provisional — i.e. the parser may still rewrite it
+ * as more input arrives. Returns 0 for committed nodes and for any node in a
+ * tree obtained from `cmark_parser_finish`.
+ */
+CMARK_GFM_EXPORT
+int cmark_node_is_provisional(cmark_node *node);
+
+/** Returns the current document tree without finalizing the parser. The
+ * returned root is owned by the parser and remains valid until the next call
+ * to `cmark_parser_feed`, `cmark_parser_snapshot`, or `cmark_parser_finish`.
+ *
+ * Triggers incremental inline parsing on any blocks marked dirty since the
+ * last snapshot, so that inlines (emphasis, code spans, links, etc.) are
+ * present in the returned tree — including a tentative best-effort
+ * interpretation of trailing unclosed delimiters in still-open blocks.
+ */
+CMARK_GFM_EXPORT
+cmark_node *cmark_parser_snapshot(cmark_parser *parser);
+
+/** Returns the byte offset into the consumed input stream before which the
+ * AST is committed and will not change. Always non-decreasing across
+ * successive calls within one parser lifetime.
+ */
+CMARK_GFM_EXPORT
+size_t cmark_parser_commit_frontier(cmark_parser *parser);
+
+/** Opaque iterator over change records since the last call to
+ * `cmark_parser_changes_since_last_snapshot` (or since parser creation).
+ * Calling this function consumes the recorded events; a second immediate call
+ * returns an empty iterator.
+ */
+typedef struct cmark_change_iter cmark_change_iter;
+
+typedef enum {
+  CMARK_CHANGE_NONE = 0,
+  /** A new node was attached to the tree.
+   */
+  CMARK_CHANGE_NODE_ADDED,
+  /** A node was detached and freed. The pointer in the change record is the
+   * parent of the removed node (the removed node itself is no longer valid).
+   */
+  CMARK_CHANGE_NODE_REMOVED,
+  /** A node's `type` (and possibly its `as` payload) was rewritten in place.
+   * Pointer identity preserved.
+   */
+  CMARK_CHANGE_NODE_RETYPED,
+  /** A node's textual content (for blocks: the raw `content` buffer) was
+   * appended to.
+   */
+  CMARK_CHANGE_NODE_CONTENT_UPDATED,
+  /** A node's inline children were re-parsed. Old inline children may have
+   * been replaced.
+   */
+  CMARK_CHANGE_NODE_INLINES_REPARSED,
+  /** A node's `CMARK_NODE__PROVISIONAL` flag was cleared — i.e. it is now
+   * committed.
+   */
+  CMARK_CHANGE_NODE_FINALIZED,
+} cmark_change_event;
+
+CMARK_GFM_EXPORT
+cmark_change_iter *cmark_parser_changes_since_last_snapshot(cmark_parser *parser);
+
+/** Advances the iterator. On return, *out_node is the affected node (or its
+ * parent for REMOVED). Returns CMARK_CHANGE_NONE when exhausted.
+ */
+CMARK_GFM_EXPORT
+cmark_change_event cmark_change_iter_next(cmark_change_iter *iter,
+                                         cmark_node **out_node);
+
+CMARK_GFM_EXPORT
+void cmark_change_iter_free(cmark_change_iter *iter);
+
 /** Parse a CommonMark document in 'buffer' of length 'len'.
  * Returns a pointer to a tree of nodes.  The memory allocated for
  * the node tree should be released using 'cmark_node_free'

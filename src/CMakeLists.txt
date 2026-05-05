@@ -24,6 +24,7 @@ set(HEADERS
   cmark_ctype.h
   render.h
   registry.h
+  streaming.h
   syntax_extension.h
   plugin.h
   )
@@ -53,6 +54,7 @@ set(LIBRARY_SOURCES
   cmark_ctype.c
   arena.c
   linked_list.c
+  streaming.c
   syntax_extension.c
   registry.c
   plugin.c
