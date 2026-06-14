@@ -7,6 +7,7 @@ set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION_GFM 13)
 set(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.gfm.${PROJECT_VERSION_GFM})
 
+include(CMakePackageConfigHelpers)
 include("FindAsan.cmake")
 include("CheckFileOffsetBits.cmake")
 

@@ -181,6 +181,25 @@ if(CMARK_SHARED OR CMARK_STATIC)
   )
 endif()
 
+# generate config and config-version files
+configure_package_config_file(
+  "cmark-gfm-config.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/generated/cmark-gfm-config.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cmark-gfm"
+)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/generated/cmark-gfm-config-version.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+# install config and config-version files
+install(
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/generated/cmark-gfm-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/generated/cmark-gfm-config-version.cmake"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cmark-gfm"
+)
+
 # Feature tests
 include(CheckIncludeFile)
 include(CheckCSourceCompiles)
