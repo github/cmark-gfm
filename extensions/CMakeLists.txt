@@ -79,7 +79,10 @@ if (CMARK_SHARED OR CMARK_STATIC)
   DESTINATION include
   )
 
-  install(EXPORT cmark-gfm-extensions DESTINATION lib${LIB_SUFFIX}/cmake-gfm-extensions)
+  install(
+    EXPORT cmark-gfm-extensions
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cmark-gfm-extensions"
+  )
 endif()
 
 # Feature tests
