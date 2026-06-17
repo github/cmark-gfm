@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 4.0)
 project(cmark-gfm)
 
 set(PROJECT_VERSION_MAJOR 0)
@@ -7,6 +7,7 @@ set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION_GFM 13)
 set(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.gfm.${PROJECT_VERSION_GFM})
 
+include(CMakePackageConfigHelpers)
 include("FindAsan.cmake")
 include("CheckFileOffsetBits.cmake")
 
