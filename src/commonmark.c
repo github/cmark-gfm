@@ -141,6 +141,12 @@ static bool is_autolink(cmark_node *node) {
   if (link_text == NULL) {
     return false;
   }
+  // Don't flatten links around images into autolinks. Ex:
+  //   [ ![image](http://.../image.png) ](http://.../)
+  uint16_t text_type = link_text->type;
+  if (text_type == CMARK_NODE_IMAGE) {
+    return false;
+  }
   cmark_consolidate_text_nodes(link_text);
   realurl = (char *)url->data;
   realurllen = url->len;
