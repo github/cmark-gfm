@@ -1,18 +1,19 @@
-FROM debian:jessie
+FROM debian:bookworm
 
-RUN apt-get update && apt-get install -y \
-  build-essential \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   autoconf \
-  libtool \
-  git \
-  pkg-config \
-  gdb \
-  valgrind \
-  python3 \
-  wget \
+  build-essential \
   clang \
-  man \
   clang-format \
+  gdb \
+  git \
+  libssl-dev \
+  libtool \
+  man \
+  pkg-config \
+  python3 \
+  valgrind \
+  wget \
   && apt-get clean
 
 RUN wget http://lcamtuf.coredump.cx/afl/releases/afl-latest.tgz && \
@@ -30,8 +31,8 @@ RUN wget https://github.com/skvadrik/re2c/releases/download/0.15.3/re2c-0.15.3.t
 	cd .. && \
 	rm -rf re2c-*
 
-RUN wget https://cmake.org/files/v3.8/cmake-3.8.2.tar.gz && \
-	tar xf cmake-3.8.2.tar.gz && \
+RUN wget https://cmake.org/files/v3.27/cmake-3.27.0.tar.gz && \
+	tar xf cmake-3.27.0.tar.gz && \
 	cd cmake-* && \
 	./bootstrap && \
 	make install && \
