@@ -175,6 +175,10 @@ if(CMARK_SHARED OR CMARK_STATIC)
     DESTINATION include
     )
 
+  install(FILES ${HEADERS}
+    DESTINATION include/cmark-gfm
+    )
+
   install(EXPORT cmark-gfm DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
 endif()
 

@@ -942,6 +942,13 @@ static void test_feed_across_line_ending(test_batch_runner *runner) {
 #  include <sys/time.h>
 static struct timeval _before, _after;
 static int _timing;
+static int _timing_scale = 1;
+#  define SETUP_TIMING()                        \
+  do {                                          \
+    char *scale = getenv("CMARK_TIMING_SCALE"); \
+    if (scale)                                  \
+      _timing_scale = atoi(scale);              \
+  } while (0)
 #  define START_TIMING() \
        gettimeofday(&_before, NULL)
 
@@ -952,10 +959,13 @@ static int _timing;
         } while (0)
 
 #  define TIMING _timing
+#  define TIMING_SCALE _timing_scale
 #else
+#  define SETUP_TIMING()
 #  define START_TIMING()
 #  define END_TIMING()
 #  define TIMING 0
+#  define TIMING_SCALE 1
 #endif
 
 static void test_pathological_regressions(test_batch_runner *runner) {
@@ -973,7 +983,8 @@ static void test_pathological_regressions(test_batch_runner *runner) {
     free(html);
     free(input);
 
-    OK(runner, TIMING < 1000, "takes less than 1000ms to run");
+    OK(runner, TIMING < 1000 * TIMING_SCALE,
+       "takes less than CMARK_TIMING_SCALE * 1000ms to run");
   }
 
   {
@@ -989,7 +1000,8 @@ static void test_pathological_regressions(test_batch_runner *runner) {
     free(html);
     free(input);
 
-    OK(runner, TIMING < 1000, "takes less than 1000ms to run");
+    OK(runner, TIMING < 1000 * TIMING_SCALE,
+       "takes less than CMARK_TIMING_SCALE * 1000ms to run");
   }
 }
 
@@ -1133,6 +1145,7 @@ int main() {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
 
+  SETUP_TIMING();
   cmark_enable_safety_checks(true);
   version(runner);
   constructor(runner);
