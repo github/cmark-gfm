@@ -689,7 +689,7 @@ static void render_commonmark(test_batch_runner *runner) {
   cmark_node *text = cmark_node_new(CMARK_NODE_TEXT);
   cmark_node_set_literal(text, "Hi");
   commonmark = cmark_render_commonmark(text, CMARK_OPT_DEFAULT, 0);
-  STR_EQ(runner, commonmark, "Hi\n", "render single inline node");
+  STR_EQ(runner, commonmark, "Hi", "render single inline node");
   free(commonmark);
 
   cmark_node_free(text);
@@ -733,7 +733,7 @@ static void render_plaintext(test_batch_runner *runner) {
   cmark_node *text = cmark_node_new(CMARK_NODE_TEXT);
   cmark_node_set_literal(text, "Hi");
   plaintext = cmark_render_plaintext(text, CMARK_OPT_DEFAULT, 0);
-  STR_EQ(runner, plaintext, "Hi\n", "render single inline node");
+  STR_EQ(runner, plaintext, "Hi", "render single inline node");
   free(plaintext);
 
   cmark_node_free(text);
