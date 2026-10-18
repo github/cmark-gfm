@@ -134,6 +134,25 @@ static int S_render_node(cmark_node *node, cmark_event_type ev_type,
       escape_xml(xml, node->as.link.title.data, node->as.link.title.len);
       cmark_strbuf_putc(xml, '"');
       break;
+    case CMARK_NODE_FOOTNOTE_DEFINITION:
+      cmark_strbuf_puts(xml, " id=\"fn-");
+      escape_xml(xml, node->as.literal.data, node->as.literal.len);
+      cmark_strbuf_putc(xml, '"');
+      break;
+    case CMARK_NODE_FOOTNOTE_REFERENCE:
+      cmark_strbuf_puts(xml, " id=\"fnref-");
+      escape_xml(xml, node->parent_footnote_def->as.literal.data, node->parent_footnote_def->as.literal.len);
+      if (node->footnote.ref_ix > 1) {
+        char n[32];
+        snprintf(n, sizeof(n), "%d", node->footnote.ref_ix);
+        cmark_strbuf_puts(xml, "-");
+        cmark_strbuf_puts(xml, n);
+      }
+      cmark_strbuf_putc(xml, '"');
+      cmark_strbuf_puts(xml, " destination=\"fn-");
+      escape_xml(xml, node->parent_footnote_def->as.literal.data, node->parent_footnote_def->as.literal.len);
+      cmark_strbuf_putc(xml, '"');
+      break;
     default:
       break;
     }
