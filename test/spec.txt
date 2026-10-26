@@ -3451,6 +3451,39 @@ bar
 <p>bar</p>
 ````````````````````````````````
 
+A [setext heading] does not break a table without a blank line above it:
+
+```````````````````````````````` example table
+| abc | def |
+| --- | --- |
+| bar | baz |
+bar
+===
+.
+<table>
+<thead>
+<tr>
+<th>abc</th>
+<th>def</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bar</td>
+<td>baz</td>
+</tr>
+<tr>
+<td>bar</td>
+<td></td>
+</tr>
+<tr>
+<td>===</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+````````````````````````````````
+
 The header row must match the [delimiter row] in the number of cells.  If not,
 a table will not be recognized:
 
