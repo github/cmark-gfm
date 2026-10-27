@@ -10,12 +10,6 @@
 
 // Functions to convert cmark_nodes to plain text strings.
 
-static CMARK_INLINE void outc(cmark_renderer *renderer, cmark_node *node, 
-                              cmark_escaping escape,
-                              int32_t c, unsigned char nextc) {
-  cmark_render_code_point(renderer, c);
-}
-
 static int S_render_node(cmark_renderer *renderer, cmark_node *node,
                          cmark_event_type ev_type, int options) {
   int list_number;
@@ -214,5 +208,5 @@ char *cmark_render_plaintext_with_mem(cmark_node *root, int options, int width, 
     // a different meaning with OPT_HARDBREAKS
     width = 0;
   }
-  return cmark_render(mem, root, options, width, outc, S_render_node);
+  return cmark_render(mem, root, options, width, NULL, S_render_node);
 }

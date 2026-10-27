@@ -730,6 +730,30 @@ static void render_plaintext(test_batch_runner *runner) {
          "render document without wrapping");
   free(plaintext);
 
+  static const char multibyte_markdown[] =
+      "- D\xC3\xA9j\xC3\xA0 vu \xC3\xA0 Z\xC3\xBCrich, \xE6\x97\xA5\xE6\x9C\xAC "
+      "\xF0\x9F\x98\x80 encore\n"
+      "\n"
+      "  ```\n"
+      "  code one\n"
+      "  code two\n"
+      "  ```\n";
+  cmark_node *multibyte_doc = cmark_parse_document(
+      multibyte_markdown, sizeof(multibyte_markdown) - 1, CMARK_OPT_DEFAULT);
+  plaintext = cmark_render_plaintext(multibyte_doc, CMARK_OPT_DEFAULT, 12);
+  STR_EQ(runner, plaintext,
+         "  - D\xC3\xA9j\xC3\xA0 vu\n"
+         "    \xC3\xA0\n"
+         "    Z\xC3\xBCrich,\n"
+         "    \xE6\x97\xA5\xE6\x9C\xAC \xF0\x9F\x98\x80\n"
+         "    encore\n"
+         "    \n"
+         "    code one\n"
+         "    code two\n",
+         "render multibyte text and code block with wrapping");
+  free(plaintext);
+  cmark_node_free(multibyte_doc);
+
   cmark_node *text = cmark_node_new(CMARK_NODE_TEXT);
   cmark_node_set_literal(text, "Hi");
   plaintext = cmark_render_plaintext(text, CMARK_OPT_DEFAULT, 0);
