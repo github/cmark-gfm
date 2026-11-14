@@ -1187,6 +1187,79 @@ static void table_row_source_pos(test_batch_runner *runner) {
   free(xml);
 }
 
+static void table_header_after_paragraph_source_pos(test_batch_runner *runner) {
+  {
+    // The header row interrupts a paragraph of two lines.
+    static const char markdown[] =
+      "Reminders are sent daily.\n"
+      "The scheduler shall send reminders.\n"
+      "| ID | Requirement |\n"
+      "|---|---|\n"
+      "| A | The report shall print. |\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-5:31\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <paragraph sourcepos=\"1:1-2:35\">\n"
+                        "    <text sourcepos=\"1:1-1:25\" xml:space=\"preserve\">Reminders are sent daily.</text>\n"
+                        "    <softbreak />\n"
+                        "    <text sourcepos=\"2:1-2:35\" xml:space=\"preserve\">The scheduler shall send reminders.</text>\n"
+                        "  </paragraph>\n"
+                        "  <table sourcepos=\"3:1-5:31\">\n"
+                        "    <table_header sourcepos=\"3:1-3:20\">\n"
+                        "      <table_cell sourcepos=\"3:2-3:5\">\n"
+                        "        <text sourcepos=\"3:3-3:4\" xml:space=\"preserve\">ID</text>\n"
+                        "      </table_cell>\n"
+                        "      <table_cell sourcepos=\"3:7-3:19\">\n"
+                        "        <text sourcepos=\"3:8-3:18\" xml:space=\"preserve\">Requirement</text>\n"
+                        "      </table_cell>\n"
+                        "    </table_header>\n"
+                        "    <table_row sourcepos=\"5:1-5:31\">\n"
+                        "      <table_cell sourcepos=\"5:2-5:4\">\n"
+                        "        <text sourcepos=\"5:3-5:3\" xml:space=\"preserve\">A</text>\n"
+                        "      </table_cell>\n"
+                        "      <table_cell sourcepos=\"5:6-5:30\">\n"
+                        "        <text sourcepos=\"5:7-5:29\" xml:space=\"preserve\">The report shall print.</text>\n"
+                        "      </table_cell>\n"
+                        "    </table_row>\n"
+                        "  </table>\n"
+                        "</document>\n",
+           "sourcepos of a table header interrupting a paragraph are as expected");
+    free(xml);
+  }
+  {
+    // The header row's container prefix is wider than the paragraph's.
+    static const char markdown[] =
+      "> Reminders are sent daily.\n"
+      ">  | ID | Req |\n"
+      "> |---|---|\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-3:11\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <block_quote sourcepos=\"1:1-3:11\">\n"
+                        "    <paragraph sourcepos=\"1:3-1:27\">\n"
+                        "      <text sourcepos=\"1:3-1:27\" xml:space=\"preserve\">Reminders are sent daily.</text>\n"
+                        "    </paragraph>\n"
+                        "    <table sourcepos=\"2:4-3:11\">\n"
+                        "      <table_header sourcepos=\"2:4-2:15\">\n"
+                        "        <table_cell sourcepos=\"2:5-2:8\">\n"
+                        "          <text sourcepos=\"2:6-2:7\" xml:space=\"preserve\">ID</text>\n"
+                        "        </table_cell>\n"
+                        "        <table_cell sourcepos=\"2:10-2:14\">\n"
+                        "          <text sourcepos=\"2:11-2:13\" xml:space=\"preserve\">Req</text>\n"
+                        "        </table_cell>\n"
+                        "      </table_header>\n"
+                        "    </table>\n"
+                        "  </block_quote>\n"
+                        "</document>\n",
+           "sourcepos of a table header with a wider prefix than its paragraph are as expected");
+    free(xml);
+  }
+}
+
 int main() {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
@@ -1219,6 +1292,7 @@ int main() {
   source_pos_inlines(runner);
   ref_source_pos(runner);
   table_row_source_pos(runner);
+  table_header_after_paragraph_source_pos(runner);
 
   test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;
