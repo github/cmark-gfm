@@ -431,6 +431,9 @@ static cmark_node *try_opening_table_row(cmark_syntax_extension *self,
                                          unsigned char *input, int len) {
   cmark_node *table_row_block;
   table_row *row;
+  // The row starts at this line's own first non-space byte, which can differ
+  // from the table's start column when the container prefix differs.
+  int row_start_column;
 
   if (cmark_parser_is_blank(parser))
     return NULL;
@@ -439,9 +442,11 @@ static cmark_node *try_opening_table_row(cmark_syntax_extension *self,
     return NULL;
   }
 
+  row_start_column = cmark_parser_get_first_nonspace(parser) + 1;
+
   table_row_block =
       cmark_parser_add_child(parser, parent_container, CMARK_NODE_TABLE_ROW,
-                             parent_container->start_column);
+                             row_start_column);
   cmark_node_set_syntax_extension(table_row_block, self);
   table_row_block->end_column = parent_container->end_column;
   table_row_block->as.opaque = parser->mem->calloc(1, sizeof(node_table_row));
@@ -461,9 +466,9 @@ static cmark_node *try_opening_table_row(cmark_syntax_extension *self,
     for (i = 0; i < row->n_columns && i < table_columns; ++i) {
       node_cell *cell = &row->cells[i];
       cmark_node *node = cmark_parser_add_child(parser, table_row_block,
-          CMARK_NODE_TABLE_CELL, parent_container->start_column + cell->start_offset);
+          CMARK_NODE_TABLE_CELL, row_start_column + cell->start_offset);
       node->internal_offset = cell->internal_offset;
-      node->end_column = parent_container->start_column + cell->end_offset;
+      node->end_column = row_start_column + cell->end_offset;
       cmark_node_set_string_content(node, (char *) cell->buf->ptr);
       cmark_node_set_syntax_extension(node, self);
       set_cell_index(node, i);

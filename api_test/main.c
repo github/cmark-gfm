@@ -1129,6 +1129,64 @@ static void ref_source_pos(test_batch_runner *runner) {
   cmark_node_free(doc);
 }
 
+static char *render_xml_with_table_extension(const char *markdown, size_t len) {
+  cmark_gfm_core_extensions_ensure_registered();
+  cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+  cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("table"));
+  cmark_parser_feed(parser, markdown, len);
+  cmark_node *doc = cmark_parser_finish(parser);
+  char *xml = cmark_render_xml(doc, CMARK_OPT_DEFAULT | CMARK_OPT_SOURCEPOS);
+  cmark_node_free(doc);
+  cmark_parser_free(parser);
+  return xml;
+}
+
+static void table_row_source_pos(test_batch_runner *runner) {
+  // Each body row has a container prefix of a different width than the
+  // table's first line: no space after the marker, and a tab.
+  static const char markdown[] =
+    "> | ID | Req |\n"
+    "> |---|---|\n"
+    ">A | x | y\n"
+    ">\t| c | d |\n";
+
+  char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+  STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                      "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                      "<document sourcepos=\"1:1-4:11\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                      "  <block_quote sourcepos=\"1:1-4:11\">\n"
+                      "    <table sourcepos=\"1:3-4:11\">\n"
+                      "      <table_header sourcepos=\"1:3-1:14\">\n"
+                      "        <table_cell sourcepos=\"1:4-1:7\">\n"
+                      "          <text sourcepos=\"1:5-1:6\" xml:space=\"preserve\">ID</text>\n"
+                      "        </table_cell>\n"
+                      "        <table_cell sourcepos=\"1:9-1:13\">\n"
+                      "          <text sourcepos=\"1:10-1:12\" xml:space=\"preserve\">Req</text>\n"
+                      "        </table_cell>\n"
+                      "      </table_header>\n"
+                      "      <table_row sourcepos=\"3:2-3:10\">\n"
+                      "        <table_cell sourcepos=\"3:2-3:3\">\n"
+                      "          <text sourcepos=\"3:2-3:2\" xml:space=\"preserve\">A</text>\n"
+                      "        </table_cell>\n"
+                      "        <table_cell sourcepos=\"3:5-3:7\">\n"
+                      "          <text sourcepos=\"3:6-3:6\" xml:space=\"preserve\">x</text>\n"
+                      "        </table_cell>\n"
+                      "      </table_row>\n"
+                      "      <table_row sourcepos=\"4:3-4:11\">\n"
+                      "        <table_cell sourcepos=\"4:4-4:6\">\n"
+                      "          <text sourcepos=\"4:5-4:5\" xml:space=\"preserve\">c</text>\n"
+                      "        </table_cell>\n"
+                      "        <table_cell sourcepos=\"4:8-4:10\">\n"
+                      "          <text sourcepos=\"4:9-4:9\" xml:space=\"preserve\">d</text>\n"
+                      "        </table_cell>\n"
+                      "      </table_row>\n"
+                      "    </table>\n"
+                      "  </block_quote>\n"
+                      "</document>\n",
+         "table row sourcepos are as expected");
+  free(xml);
+}
+
 int main() {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
@@ -1160,6 +1218,7 @@ int main() {
   source_pos(runner);
   source_pos_inlines(runner);
   ref_source_pos(runner);
+  table_row_source_pos(runner);
 
   test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;
