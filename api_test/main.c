@@ -1258,6 +1258,70 @@ static void table_header_after_paragraph_source_pos(test_batch_runner *runner) {
            "sourcepos of a table header with a wider prefix than its paragraph are as expected");
     free(xml);
   }
+  {
+    // The header row is a lazy continuation line, which the paragraph keeps
+    // with its leading spaces.
+    static const char markdown[] =
+      "> intro\n"
+      "  A | B\n"
+      "> ---|---\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-3:9\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <block_quote sourcepos=\"1:1-3:9\">\n"
+                        "    <paragraph sourcepos=\"1:3-1:7\">\n"
+                        "      <text sourcepos=\"1:3-1:7\" xml:space=\"preserve\">intro</text>\n"
+                        "    </paragraph>\n"
+                        "    <table sourcepos=\"2:3-3:9\">\n"
+                        "      <table_header sourcepos=\"2:3-2:7\">\n"
+                        "        <table_cell sourcepos=\"2:3-2:4\">\n"
+                        "          <text sourcepos=\"2:3-2:3\" xml:space=\"preserve\">A</text>\n"
+                        "        </table_cell>\n"
+                        "        <table_cell sourcepos=\"2:6-2:7\">\n"
+                        "          <text sourcepos=\"2:7-2:7\" xml:space=\"preserve\">B</text>\n"
+                        "        </table_cell>\n"
+                        "      </table_header>\n"
+                        "    </table>\n"
+                        "  </block_quote>\n"
+                        "</document>\n",
+           "sourcepos of a table header on a lazy line with leading spaces are as expected");
+    free(xml);
+  }
+  {
+    // The header row is a lazy continuation line whose tab the outer block
+    // quote marker consumes in part, so the paragraph keeps it as spaces.
+    static const char markdown[] =
+      "> > intro\n"
+      ">\tA | B\n"
+      "> > --|--\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-3:9\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <block_quote sourcepos=\"1:1-3:9\">\n"
+                        "    <block_quote sourcepos=\"1:3-3:9\">\n"
+                        "      <paragraph sourcepos=\"1:5-1:9\">\n"
+                        "        <text sourcepos=\"1:5-1:9\" xml:space=\"preserve\">intro</text>\n"
+                        "      </paragraph>\n"
+                        "      <table sourcepos=\"2:3-3:9\">\n"
+                        "        <table_header sourcepos=\"2:3-2:7\">\n"
+                        "          <table_cell sourcepos=\"2:3-2:4\">\n"
+                        "            <text sourcepos=\"2:3-2:3\" xml:space=\"preserve\">A</text>\n"
+                        "          </table_cell>\n"
+                        "          <table_cell sourcepos=\"2:6-2:7\">\n"
+                        "            <text sourcepos=\"2:7-2:7\" xml:space=\"preserve\">B</text>\n"
+                        "          </table_cell>\n"
+                        "        </table_header>\n"
+                        "      </table>\n"
+                        "    </block_quote>\n"
+                        "  </block_quote>\n"
+                        "</document>\n",
+           "sourcepos of a table header on a lazy line with a partly consumed tab are as expected");
+    free(xml);
+  }
 }
 
 int main() {
