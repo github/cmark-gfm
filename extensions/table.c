@@ -280,14 +280,38 @@ static table_row *row_from_string(cmark_syntax_extension *self,
   return row;
 }
 
+// Returns the length of `string`, minus a trailing line ending.
+static int length_without_line_ending(const unsigned char *string, int len) {
+  if (len > 0 && string[len - 1] == '\n')
+    --len;
+  if (len > 0 && string[len - 1] == '\r')
+    --len;
+  return len;
+}
+
 static void try_inserting_table_header_paragraph(cmark_parser *parser,
                                                  cmark_node *parent_container,
                                                  unsigned char *parent_string,
-                                                 int paragraph_offset) {
+                                                 int paragraph_offset,
+                                                 int header_line) {
   cmark_node *paragraph;
   cmark_strbuf *paragraph_content;
+  int last_line_offset = length_without_line_ending(parent_string, paragraph_offset);
 
   paragraph = cmark_node_new_with_mem(CMARK_NODE_PARAGRAPH, parser->mem);
+
+  // The paragraph keeps the lines above the header row. Its content holds
+  // each line from its first non-space byte, so the end column of its last
+  // line is exact when that is its first line; otherwise it assumes the same
+  // container prefix as the first line, as inline positions do.
+  while (last_line_offset > 0 && parent_string[last_line_offset - 1] != '\n')
+    --last_line_offset;
+  paragraph->start_line = parent_container->start_line;
+  paragraph->start_column = parent_container->start_column;
+  paragraph->end_line = header_line - 1;
+  paragraph->end_column = parent_container->start_column - 1 +
+      length_without_line_ending(parent_string + last_line_offset,
+                                 paragraph_offset - last_line_offset);
 
   paragraph_content = unescape_pipes(parser->mem, parent_string, paragraph_offset);
   cmark_strbuf_trim(paragraph_content);
@@ -309,6 +333,7 @@ static cmark_node *try_opening_table_header(cmark_syntax_extension *self,
   table_row *delimiter_row = NULL;
   node_table_row *ntr;
   const char *parent_string;
+  int header_line, header_offset, header_start_column, header_end_column;
   uint16_t i;
 
   if (parent_container->flags & CMARK_NODE__TABLE_VISITED) {
@@ -366,10 +391,27 @@ static cmark_node *try_opening_table_header(cmark_syntax_extension *self,
     return parent_container;
   }
 
+  // The header row is the paragraph's last line, the line before this one.
+  // The paragraph keeps a lazy continuation line with its leading spaces,
+  // and a partially consumed tab expanded to spaces, but from the line's
+  // first non-space byte on its content matches the line byte for byte, so
+  // the length of that rest gives the width of everything before it.
+  header_line = cmark_parser_get_line_number(parser) - 1;
+  header_end_column = cmark_parser_get_last_line_length(parser);
+  header_offset = header_row->paragraph_offset;
+  while (parent_string[header_offset] == ' ' || parent_string[header_offset] == '\t')
+    ++header_offset;
+  header_start_column = header_end_column + 1 -
+      length_without_line_ending((unsigned char *)parent_string + header_offset,
+                                 (int)strlen(parent_string) - header_offset);
+
   if (header_row->paragraph_offset) {
     try_inserting_table_header_paragraph(parser, parent_container, (unsigned char *)parent_string,
-                                         header_row->paragraph_offset);
+                                         header_row->paragraph_offset, header_line);
   }
+
+  parent_container->start_line = header_line;
+  parent_container->start_column = header_start_column;
 
   cmark_node_set_syntax_extension(parent_container, self);
   parent_container->as.opaque = parser->mem->calloc(1, sizeof(node_table));
@@ -394,21 +436,25 @@ static cmark_node *try_opening_table_header(cmark_syntax_extension *self,
 
   table_header =
       cmark_parser_add_child(parser, parent_container, CMARK_NODE_TABLE_ROW,
-                             parent_container->start_column);
+                             header_start_column);
   cmark_node_set_syntax_extension(table_header, self);
-  table_header->end_column = parent_container->start_column + (int)strlen(parent_string) - 2;
-  table_header->start_line = table_header->end_line = parent_container->start_line;
+  table_header->end_column = header_end_column;
+  table_header->start_line = table_header->end_line = header_line;
 
   table_header->as.opaque = ntr = (node_table_row *)parser->mem->calloc(1, sizeof(node_table_row));
   ntr->is_header = true;
 
   for (i = 0; i < header_row->n_columns; ++i) {
     node_cell *cell = &header_row->cells[i];
+    // A first cell without a leading pipe starts at the row's first
+    // non-space byte, as in a body row.
+    int cell_start_offset = cell->start_offset > header_offset ? cell->start_offset : header_offset;
     cmark_node *header_cell = cmark_parser_add_child(parser, table_header,
-                                                     CMARK_NODE_TABLE_CELL, parent_container->start_column + cell->start_offset);
-    header_cell->start_line = header_cell->end_line = parent_container->start_line;
+                                                     CMARK_NODE_TABLE_CELL,
+                                                     header_start_column + cell_start_offset - header_offset);
+    header_cell->start_line = header_cell->end_line = header_line;
     header_cell->internal_offset = cell->internal_offset;
-    header_cell->end_column = parent_container->start_column + cell->end_offset;
+    header_cell->end_column = header_start_column + cell->end_offset - header_offset;
     cmark_node_set_string_content(header_cell, (char *) cell->buf->ptr);
     cmark_node_set_syntax_extension(header_cell, self);
     set_cell_index(header_cell, i);
@@ -431,6 +477,9 @@ static cmark_node *try_opening_table_row(cmark_syntax_extension *self,
                                          unsigned char *input, int len) {
   cmark_node *table_row_block;
   table_row *row;
+  // The row starts at this line's own first non-space byte, which can differ
+  // from the table's start column when the container prefix differs.
+  int row_start_column;
 
   if (cmark_parser_is_blank(parser))
     return NULL;
@@ -439,9 +488,11 @@ static cmark_node *try_opening_table_row(cmark_syntax_extension *self,
     return NULL;
   }
 
+  row_start_column = cmark_parser_get_first_nonspace(parser) + 1;
+
   table_row_block =
       cmark_parser_add_child(parser, parent_container, CMARK_NODE_TABLE_ROW,
-                             parent_container->start_column);
+                             row_start_column);
   cmark_node_set_syntax_extension(table_row_block, self);
   table_row_block->end_column = parent_container->end_column;
   table_row_block->as.opaque = parser->mem->calloc(1, sizeof(node_table_row));
@@ -461,9 +512,9 @@ static cmark_node *try_opening_table_row(cmark_syntax_extension *self,
     for (i = 0; i < row->n_columns && i < table_columns; ++i) {
       node_cell *cell = &row->cells[i];
       cmark_node *node = cmark_parser_add_child(parser, table_row_block,
-          CMARK_NODE_TABLE_CELL, parent_container->start_column + cell->start_offset);
+          CMARK_NODE_TABLE_CELL, row_start_column + cell->start_offset);
       node->internal_offset = cell->internal_offset;
-      node->end_column = parent_container->start_column + cell->end_offset;
+      node->end_column = row_start_column + cell->end_offset;
       cmark_node_set_string_content(node, (char *) cell->buf->ptr);
       cmark_node_set_syntax_extension(node, self);
       set_cell_index(node, i);

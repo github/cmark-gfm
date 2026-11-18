@@ -1129,6 +1129,201 @@ static void ref_source_pos(test_batch_runner *runner) {
   cmark_node_free(doc);
 }
 
+static char *render_xml_with_table_extension(const char *markdown, size_t len) {
+  cmark_gfm_core_extensions_ensure_registered();
+  cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+  cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("table"));
+  cmark_parser_feed(parser, markdown, len);
+  cmark_node *doc = cmark_parser_finish(parser);
+  char *xml = cmark_render_xml(doc, CMARK_OPT_DEFAULT | CMARK_OPT_SOURCEPOS);
+  cmark_node_free(doc);
+  cmark_parser_free(parser);
+  return xml;
+}
+
+static void table_row_source_pos(test_batch_runner *runner) {
+  // Each body row has a container prefix of a different width than the
+  // table's first line: no space after the marker, and a tab.
+  static const char markdown[] =
+    "> | ID | Req |\n"
+    "> |---|---|\n"
+    ">A | x | y\n"
+    ">\t| c | d |\n";
+
+  char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+  STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                      "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                      "<document sourcepos=\"1:1-4:11\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                      "  <block_quote sourcepos=\"1:1-4:11\">\n"
+                      "    <table sourcepos=\"1:3-4:11\">\n"
+                      "      <table_header sourcepos=\"1:3-1:14\">\n"
+                      "        <table_cell sourcepos=\"1:4-1:7\">\n"
+                      "          <text sourcepos=\"1:5-1:6\" xml:space=\"preserve\">ID</text>\n"
+                      "        </table_cell>\n"
+                      "        <table_cell sourcepos=\"1:9-1:13\">\n"
+                      "          <text sourcepos=\"1:10-1:12\" xml:space=\"preserve\">Req</text>\n"
+                      "        </table_cell>\n"
+                      "      </table_header>\n"
+                      "      <table_row sourcepos=\"3:2-3:10\">\n"
+                      "        <table_cell sourcepos=\"3:2-3:3\">\n"
+                      "          <text sourcepos=\"3:2-3:2\" xml:space=\"preserve\">A</text>\n"
+                      "        </table_cell>\n"
+                      "        <table_cell sourcepos=\"3:5-3:7\">\n"
+                      "          <text sourcepos=\"3:6-3:6\" xml:space=\"preserve\">x</text>\n"
+                      "        </table_cell>\n"
+                      "      </table_row>\n"
+                      "      <table_row sourcepos=\"4:3-4:11\">\n"
+                      "        <table_cell sourcepos=\"4:4-4:6\">\n"
+                      "          <text sourcepos=\"4:5-4:5\" xml:space=\"preserve\">c</text>\n"
+                      "        </table_cell>\n"
+                      "        <table_cell sourcepos=\"4:8-4:10\">\n"
+                      "          <text sourcepos=\"4:9-4:9\" xml:space=\"preserve\">d</text>\n"
+                      "        </table_cell>\n"
+                      "      </table_row>\n"
+                      "    </table>\n"
+                      "  </block_quote>\n"
+                      "</document>\n",
+         "table row sourcepos are as expected");
+  free(xml);
+}
+
+static void table_header_after_paragraph_source_pos(test_batch_runner *runner) {
+  {
+    // The header row interrupts a paragraph of two lines.
+    static const char markdown[] =
+      "Reminders are sent daily.\n"
+      "The scheduler shall send reminders.\n"
+      "| ID | Requirement |\n"
+      "|---|---|\n"
+      "| A | The report shall print. |\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-5:31\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <paragraph sourcepos=\"1:1-2:35\">\n"
+                        "    <text sourcepos=\"1:1-1:25\" xml:space=\"preserve\">Reminders are sent daily.</text>\n"
+                        "    <softbreak />\n"
+                        "    <text sourcepos=\"2:1-2:35\" xml:space=\"preserve\">The scheduler shall send reminders.</text>\n"
+                        "  </paragraph>\n"
+                        "  <table sourcepos=\"3:1-5:31\">\n"
+                        "    <table_header sourcepos=\"3:1-3:20\">\n"
+                        "      <table_cell sourcepos=\"3:2-3:5\">\n"
+                        "        <text sourcepos=\"3:3-3:4\" xml:space=\"preserve\">ID</text>\n"
+                        "      </table_cell>\n"
+                        "      <table_cell sourcepos=\"3:7-3:19\">\n"
+                        "        <text sourcepos=\"3:8-3:18\" xml:space=\"preserve\">Requirement</text>\n"
+                        "      </table_cell>\n"
+                        "    </table_header>\n"
+                        "    <table_row sourcepos=\"5:1-5:31\">\n"
+                        "      <table_cell sourcepos=\"5:2-5:4\">\n"
+                        "        <text sourcepos=\"5:3-5:3\" xml:space=\"preserve\">A</text>\n"
+                        "      </table_cell>\n"
+                        "      <table_cell sourcepos=\"5:6-5:30\">\n"
+                        "        <text sourcepos=\"5:7-5:29\" xml:space=\"preserve\">The report shall print.</text>\n"
+                        "      </table_cell>\n"
+                        "    </table_row>\n"
+                        "  </table>\n"
+                        "</document>\n",
+           "sourcepos of a table header interrupting a paragraph are as expected");
+    free(xml);
+  }
+  {
+    // The header row's container prefix is wider than the paragraph's.
+    static const char markdown[] =
+      "> Reminders are sent daily.\n"
+      ">  | ID | Req |\n"
+      "> |---|---|\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-3:11\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <block_quote sourcepos=\"1:1-3:11\">\n"
+                        "    <paragraph sourcepos=\"1:3-1:27\">\n"
+                        "      <text sourcepos=\"1:3-1:27\" xml:space=\"preserve\">Reminders are sent daily.</text>\n"
+                        "    </paragraph>\n"
+                        "    <table sourcepos=\"2:4-3:11\">\n"
+                        "      <table_header sourcepos=\"2:4-2:15\">\n"
+                        "        <table_cell sourcepos=\"2:5-2:8\">\n"
+                        "          <text sourcepos=\"2:6-2:7\" xml:space=\"preserve\">ID</text>\n"
+                        "        </table_cell>\n"
+                        "        <table_cell sourcepos=\"2:10-2:14\">\n"
+                        "          <text sourcepos=\"2:11-2:13\" xml:space=\"preserve\">Req</text>\n"
+                        "        </table_cell>\n"
+                        "      </table_header>\n"
+                        "    </table>\n"
+                        "  </block_quote>\n"
+                        "</document>\n",
+           "sourcepos of a table header with a wider prefix than its paragraph are as expected");
+    free(xml);
+  }
+  {
+    // The header row is a lazy continuation line, which the paragraph keeps
+    // with its leading spaces.
+    static const char markdown[] =
+      "> intro\n"
+      "  A | B\n"
+      "> ---|---\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-3:9\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <block_quote sourcepos=\"1:1-3:9\">\n"
+                        "    <paragraph sourcepos=\"1:3-1:7\">\n"
+                        "      <text sourcepos=\"1:3-1:7\" xml:space=\"preserve\">intro</text>\n"
+                        "    </paragraph>\n"
+                        "    <table sourcepos=\"2:3-3:9\">\n"
+                        "      <table_header sourcepos=\"2:3-2:7\">\n"
+                        "        <table_cell sourcepos=\"2:3-2:4\">\n"
+                        "          <text sourcepos=\"2:3-2:3\" xml:space=\"preserve\">A</text>\n"
+                        "        </table_cell>\n"
+                        "        <table_cell sourcepos=\"2:6-2:7\">\n"
+                        "          <text sourcepos=\"2:7-2:7\" xml:space=\"preserve\">B</text>\n"
+                        "        </table_cell>\n"
+                        "      </table_header>\n"
+                        "    </table>\n"
+                        "  </block_quote>\n"
+                        "</document>\n",
+           "sourcepos of a table header on a lazy line with leading spaces are as expected");
+    free(xml);
+  }
+  {
+    // The header row is a lazy continuation line whose tab the outer block
+    // quote marker consumes in part, so the paragraph keeps it as spaces.
+    static const char markdown[] =
+      "> > intro\n"
+      ">\tA | B\n"
+      "> > --|--\n";
+
+    char *xml = render_xml_with_table_extension(markdown, sizeof(markdown) - 1);
+    STR_EQ(runner, xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<!DOCTYPE document SYSTEM \"CommonMark.dtd\">\n"
+                        "<document sourcepos=\"1:1-3:9\" xmlns=\"http://commonmark.org/xml/1.0\">\n"
+                        "  <block_quote sourcepos=\"1:1-3:9\">\n"
+                        "    <block_quote sourcepos=\"1:3-3:9\">\n"
+                        "      <paragraph sourcepos=\"1:5-1:9\">\n"
+                        "        <text sourcepos=\"1:5-1:9\" xml:space=\"preserve\">intro</text>\n"
+                        "      </paragraph>\n"
+                        "      <table sourcepos=\"2:3-3:9\">\n"
+                        "        <table_header sourcepos=\"2:3-2:7\">\n"
+                        "          <table_cell sourcepos=\"2:3-2:4\">\n"
+                        "            <text sourcepos=\"2:3-2:3\" xml:space=\"preserve\">A</text>\n"
+                        "          </table_cell>\n"
+                        "          <table_cell sourcepos=\"2:6-2:7\">\n"
+                        "            <text sourcepos=\"2:7-2:7\" xml:space=\"preserve\">B</text>\n"
+                        "          </table_cell>\n"
+                        "        </table_header>\n"
+                        "      </table>\n"
+                        "    </block_quote>\n"
+                        "  </block_quote>\n"
+                        "</document>\n",
+           "sourcepos of a table header on a lazy line with a partly consumed tab are as expected");
+    free(xml);
+  }
+}
+
 int main() {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
@@ -1160,6 +1355,8 @@ int main() {
   source_pos(runner);
   source_pos_inlines(runner);
   ref_source_pos(runner);
+  table_row_source_pos(runner);
+  table_header_after_paragraph_source_pos(runner);
 
   test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;
