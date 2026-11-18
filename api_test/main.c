@@ -1105,6 +1105,65 @@ static void source_pos_inlines(test_batch_runner *runner) {
   }
 }
 
+static void table_cell_new_with_ext(test_batch_runner *runner) {
+  static const char markdown[] = "| foo | bar |\n"
+                                 "| :-- | --: |\n"
+                                 "| baz | bim |\n";
+
+  cmark_gfm_core_extensions_ensure_registered();
+
+  cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+  cmark_syntax_extension *table_ext = cmark_find_syntax_extension("table");
+  OK(runner, table_ext != NULL, "table extension is registered");
+  cmark_parser_attach_syntax_extension(parser, table_ext);
+  cmark_parser_feed(parser, markdown, sizeof(markdown) - 1);
+  cmark_node *doc = cmark_parser_finish(parser);
+  cmark_parser_free(parser);
+
+  cmark_node *table = cmark_node_first_child(doc);
+  cmark_node *header = cmark_node_first_child(table);
+  cmark_node *cell = cmark_node_first_child(header);
+
+  cmark_node *new_cell = cmark_node_new_with_ext(
+      cmark_node_get_type(cell), cmark_node_get_syntax_extension(cell));
+  INT_EQ(runner, new_cell->as.cell_index, 0,
+         "table cell created with cmark_node_new_with_ext has cell_index 0");
+
+  OK(runner, cmark_node_prepend_child(header, new_cell),
+     "prepend new table cell");
+  cmark_node_unlink(cell);
+  cmark_node_free(cell);
+
+  char *html = cmark_render_html(doc, CMARK_OPT_DEFAULT, NULL);
+  STR_EQ(runner, html,
+         "<table>\n"
+         "<thead>\n"
+         "<tr>\n"
+         "<th align=\"left\"></th>\n"
+         "<th align=\"right\">bar</th>\n"
+         "</tr>\n"
+         "</thead>\n"
+         "<tbody>\n"
+         "<tr>\n"
+         "<td align=\"left\">baz</td>\n"
+         "<td align=\"right\">bim</td>\n"
+         "</tr>\n"
+         "</tbody>\n"
+         "</table>\n",
+         "html render after replacing first header cell");
+  free(html);
+
+  char *xml = cmark_render_xml(doc, CMARK_OPT_DEFAULT);
+  OK(runner, xml != NULL, "xml render after replacing first header cell");
+  OK(runner, xml && strstr(xml, "align=\"left\"") != NULL,
+     "xml includes left alignment for new cell");
+  OK(runner, xml && strstr(xml, "align=\"right\"") != NULL,
+     "xml includes right alignment for remaining cell");
+  free(xml);
+
+  cmark_node_free(doc);
+}
+
 static void ref_source_pos(test_batch_runner *runner) {
   static const char markdown[] =
     "Let's try [reference] links.\n"
@@ -1160,6 +1219,7 @@ int main() {
   source_pos(runner);
   source_pos_inlines(runner);
   ref_source_pos(runner);
+  table_cell_new_with_ext(runner);
 
   test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;

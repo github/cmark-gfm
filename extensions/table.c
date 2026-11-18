@@ -830,7 +830,9 @@ static void opaque_alloc(cmark_syntax_extension *self, cmark_mem *mem, cmark_nod
   } else if (node->type == CMARK_NODE_TABLE_ROW) {
     node->as.opaque = mem->calloc(1, sizeof(node_table_row));
   } else if (node->type == CMARK_NODE_TABLE_CELL) {
-    node->as.opaque = mem->calloc(1, sizeof(node_cell));
+    // cell_index shares the `as` union with opaque. Do not allocate a
+    // node_cell here: that would store a pointer as the column index.
+    node->as.cell_index = 0;
   }
 }
 
