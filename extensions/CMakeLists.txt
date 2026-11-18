@@ -17,6 +17,8 @@ include_directories(
   ${PROJECT_BINARY_DIR}/src
 )
 
+include (GenerateExportHeader)
+
 include_directories(. ${CMAKE_CURRENT_BINARY_DIR})
 
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_RELEASE} -pg")
@@ -27,7 +29,6 @@ if (CMARK_SHARED)
 
   set_target_properties(${LIBRARY} PROPERTIES
     OUTPUT_NAME "cmark-gfm-extensions"
-    DEFINE_SYMBOL "cmark-gfm"
     SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.gfm.${PROJECT_VERSION_GFM}
     VERSION ${PROJECT_VERSION})
 
@@ -36,6 +37,9 @@ if (CMARK_SHARED)
 
   # Avoid name clash between PROGRAM and LIBRARY pdb files.
   set_target_properties(${LIBRARY} PROPERTIES PDB_NAME cmark-gfm-extensions_dll)
+
+  generate_export_header(${LIBRARY}
+    BASE_NAME cmark-gfm-extensions)
 
   list(APPEND CMARK_INSTALL ${LIBRARY})
   target_link_libraries(${LIBRARY} libcmark-gfm)
@@ -47,7 +51,6 @@ if (CMARK_STATIC)
 
   set_target_properties(${STATICLIBRARY} PROPERTIES
     COMPILE_FLAGS "-DCMARK_GFM_STATIC_DEFINE -DCMARK_GFM_EXTENSIONS_STATIC_DEFINE"
-    DEFINE_SYMBOL "cmark-gfm"
     POSITION_INDEPENDENT_CODE ON)
 
   if (MSVC)
@@ -59,6 +62,11 @@ if (CMARK_STATIC)
       OUTPUT_NAME "cmark-gfm-extensions"
       VERSION ${PROJECT_VERSION})
   endif(MSVC)
+
+  if (NOT CMARK_SHARED)
+    generate_export_header(${STATICLIBRARY}
+      BASE_NAME cmark-gfm-extensions)
+  endif()
 
   list(APPEND CMARK_INSTALL ${STATICLIBRARY})
 endif()
@@ -76,6 +84,7 @@ install(TARGETS ${CMARK_INSTALL}
 if (CMARK_SHARED OR CMARK_STATIC)
   install(FILES
   cmark-gfm-core-extensions.h
+  ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm-extensions_export.h
   DESTINATION include
   )
 
