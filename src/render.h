@@ -47,6 +47,7 @@ void cmark_render_ascii(cmark_renderer *renderer, const char *s);
 
 void cmark_render_code_point(cmark_renderer *renderer, uint32_t c);
 
+// A NULL outc writes every code point unchanged, which lets S_out copy runs.
 char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
                    void (*outc)(cmark_renderer *, cmark_node *,
                                 cmark_escaping, int32_t,

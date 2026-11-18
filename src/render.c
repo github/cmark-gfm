@@ -19,6 +19,12 @@ static CMARK_INLINE void S_blankline(cmark_renderer *renderer) {
   }
 }
 
+static void S_outc_verbatim(cmark_renderer *renderer, cmark_node *node,
+                            cmark_escaping escape, int32_t c,
+                            unsigned char nextc) {
+  cmark_render_code_point(renderer, c);
+}
+
 static void S_out(cmark_renderer *renderer, cmark_node *node,
                   const char *source, bool wrap,
                   cmark_escaping escape) {
@@ -57,12 +63,54 @@ static void S_out(cmark_renderer *renderer, cmark_node *node,
     renderer->need_cr -= 1;
   }
 
+  // Characters the renderer writes back unchanged are copied in runs rather
+  // than decoded and re-encoded one by one. Spaces (when wrapping), newlines
+  // (in LITERAL), U+FFFE, U+FFFF and invalid UTF-8 still go through the loop
+  // below.
+  bool verbatim =
+      !ext && (escape == LITERAL || renderer->outc == S_outc_verbatim);
+
   while (i < length) {
     if (renderer->begin_line) {
       cmark_strbuf_put(renderer->buffer, renderer->prefix->ptr,
                        renderer->prefix->size);
       // note: this assumes prefix is ascii:
       renderer->column = renderer->prefix->size;
+    }
+
+    // With no pending break point, the width check below cannot fire.
+    if (verbatim && (renderer->width == 0 || renderer->last_breakable == 0)) {
+      int run_end = i;
+      int code_points = 0;
+      bool all_digits = true;
+      while (run_end < length) {
+        unsigned char byte = (unsigned char)source[run_end];
+        if (byte < 0x80) {
+          c = byte;
+          len = 1;
+        } else {
+          len = cmark_utf8proc_iterate((const uint8_t *)source + run_end,
+                                       length - run_end, &c);
+          // cmark_utf8proc_encode_char writes U+FFFE and U+FFFF as one byte.
+          if (len == -1 || c == 0xFFFE || c == 0xFFFF)
+            break;
+        }
+        if ((c == ' ' && wrap) || (c == '\n' && escape == LITERAL))
+          break;
+        // (char)c truncates, as the per-character path below does.
+        all_digits = all_digits && cmark_isdigit((char)c);
+        run_end += len;
+        code_points += 1;
+      }
+      if (run_end > i) {
+        cmark_strbuf_put(renderer->buffer, (const unsigned char *)source + i,
+                         run_end - i);
+        renderer->column += code_points;
+        renderer->begin_line = false;
+        renderer->begin_content = renderer->begin_content && all_digits;
+        i = run_end;
+        continue;
+      }
     }
 
     len = cmark_utf8proc_iterate((const uint8_t *)source + i, length - i, &c);
@@ -168,6 +216,9 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
   cmark_event_type ev_type;
   char *result;
   cmark_iter *iter = cmark_iter_new(root);
+
+  if (outc == NULL)
+    outc = S_outc_verbatim;
 
   cmark_renderer renderer = {mem,   &buf, &pref, 0,           width,
                              0,     0,    true,  true,        false,
