@@ -67,10 +67,11 @@ set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_NO_WARNINGS ON)
 
 include (InstallRequiredSystemLibraries)
 install(TARGETS ${CMARK_INSTALL}
-  EXPORT cmark-gfm-extensions
+  EXPORT cmark-gfm-extensions-config
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib${LIB_SUFFIX}
   ARCHIVE DESTINATION lib${LIB_SUFFIX}
+  INCLUDES DESTINATION include
   )
 
 if (CMARK_SHARED OR CMARK_STATIC)
@@ -79,7 +80,7 @@ if (CMARK_SHARED OR CMARK_STATIC)
   DESTINATION include
   )
 
-  install(EXPORT cmark-gfm-extensions DESTINATION lib${LIB_SUFFIX}/cmake-gfm-extensions)
+  install(EXPORT cmark-gfm-extensions-config DESTINATION lib${LIB_SUFFIX}/cmake-gfm-extensions)
 endif()
 
 # Feature tests
@@ -104,7 +105,7 @@ if(MSVC)
   else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
   endif()
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /WX /wd4706 /wd4204 /wd4221 /wd4100 /D_CRT_SECURE_NO_WARNINGS")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /utf-8 /WX /wd4706 /wd4204 /wd4221 /wd4100 /D_CRT_SECURE_NO_WARNINGS")
 elseif(CMAKE_COMPILER_IS_GNUCC OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter -std=c99 -pedantic")
 endif()
