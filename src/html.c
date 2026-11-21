@@ -68,7 +68,7 @@ static bool S_put_footnote_backref(cmark_html_renderer *renderer, cmark_strbuf *
 
   cmark_strbuf_puts(html, "<a href=\"#fnref-");
   houdini_escape_href(html, node->as.literal.data, node->as.literal.len);
-  cmark_strbuf_puts(html, "\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"");
+  cmark_strbuf_puts(html, "\" class=\"footnote-backref\" data-footnote-backref=\"data-footnote-backref\" data-footnote-backref-idx=\"");
   cmark_strbuf_puts(html, m);
   cmark_strbuf_puts(html, "\" aria-label=\"Back to reference ");
   cmark_strbuf_puts(html, m);
@@ -84,7 +84,7 @@ static bool S_put_footnote_backref(cmark_html_renderer *renderer, cmark_strbuf *
       houdini_escape_href(html, node->as.literal.data, node->as.literal.len);
       cmark_strbuf_puts(html, "-");
       cmark_strbuf_puts(html, n);
-      cmark_strbuf_puts(html, "\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"");
+      cmark_strbuf_puts(html, "\" class=\"footnote-backref\" data-footnote-backref=\"data-footnote-backref\" data-footnote-backref-idx=\"");
       cmark_strbuf_puts(html, m);
       cmark_strbuf_puts(html, "-");
       cmark_strbuf_puts(html, n);
@@ -422,7 +422,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
   case CMARK_NODE_FOOTNOTE_DEFINITION:
     if (entering) {
       if (renderer->footnote_ix == 0) {
-        cmark_strbuf_puts(html, "<section class=\"footnotes\" data-footnotes>\n<ol>\n");
+        cmark_strbuf_puts(html, "<section class=\"footnotes\" data-footnotes=\"data-footnotes\">\n<ol>\n");
       }
       ++renderer->footnote_ix;
 
@@ -451,7 +451,7 @@ static int S_render_node(cmark_html_renderer *renderer, cmark_node *node,
         cmark_strbuf_puts(html, n);
       }
 
-      cmark_strbuf_puts(html, "\" data-footnote-ref>");
+      cmark_strbuf_puts(html, "\" data-footnote-ref=\"data-footnote-ref\">");
       houdini_escape_href(html, node->as.literal.data, node->as.literal.len);
       cmark_strbuf_puts(html, "</a></sup>");
     }
