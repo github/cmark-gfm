@@ -1129,6 +1129,37 @@ static void ref_source_pos(test_batch_runner *runner) {
   cmark_node_free(doc);
 }
 
+static void table_cell_custom_inline(test_batch_runner *runner) {
+  static const char markdown[] = "| a |\n|---|\n| <b>x</b> |\n";
+  cmark_gfm_core_extensions_ensure_registered();
+  cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+  cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("table"));
+  cmark_parser_feed(parser, markdown, sizeof(markdown) - 1);
+  cmark_node *doc = cmark_parser_finish(parser);
+
+  cmark_node *html = NULL;
+  cmark_iter *iter = cmark_iter_new(doc);
+  while (cmark_iter_next(iter) != CMARK_EVENT_DONE) {
+    cmark_node *node = cmark_iter_get_node(iter);
+    if (html == NULL && cmark_node_get_type(node) == CMARK_NODE_HTML_INLINE)
+      html = node;
+  }
+  cmark_iter_free(iter);
+  cmark_node *cell = cmark_node_parent(html);
+
+  OK(runner, cmark_node_set_type(html, CMARK_NODE_CUSTOM_INLINE),
+     "a table cell's raw HTML can become a custom inline");
+  cmark_node *added = cmark_node_new(CMARK_NODE_CUSTOM_INLINE);
+  OK(runner, cmark_node_append_child(cell, added),
+     "a table cell takes a custom inline child");
+  cmark_node *block = cmark_node_new(CMARK_NODE_PARAGRAPH);
+  OK(runner, !cmark_node_append_child(cell, block), "a table cell still refuses a block");
+  cmark_node_free(block);
+
+  cmark_node_free(doc);
+  cmark_parser_free(parser);
+}
+
 int main() {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
@@ -1160,6 +1191,7 @@ int main() {
   source_pos(runner);
   source_pos_inlines(runner);
   ref_source_pos(runner);
+  table_cell_custom_inline(runner);
 
   test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;
