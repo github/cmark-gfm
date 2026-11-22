@@ -545,12 +545,56 @@ static void process_footnotes(cmark_parser *parser) {
   cmark_map_free(map);
 }
 
+// The input should be a pointer to the beginning of a list item just after the
+// the period. Ex: given "1. bar" should be a pointer to " bar". It will return
+// 0 if there are only whitespace characters in the would-be list item. We
+// return 1 if the list item contains text.
+static bool lists_contains_item_text(cmark_chunk *input, bufsize_t pos) {
+  int indentation = 0;
+  int seen_newline = 0;
+  for (bufsize_t i = pos; seen_newline <= 1 && i < input->len; i++) {
+    int c = peek_at(input, i);
+    // We've seen a new line. Remove it from out budget
+    if (c == '\n') {
+      indentation = 0;
+      seen_newline++;
+    }
+
+    // We haven't found a character
+    if (cmark_isspace(c)) {
+      indentation += 1;
+      continue;
+    }
+
+    // If we have already seen a newline we must indent at
+    // least 3 spaces. Not a list item:
+    // ```
+    // 1.
+    //   not in the list item
+    // ```
+    // Is a list item:
+    // ```
+    // 1.
+    //    in the list item
+    // ```
+    if (seen_newline == 1 && indentation < 3) {
+      return false;
+    }
+
+    // We found a non-space character before the first two newlines
+    return true;
+  }
+
+  return false;
+}
+
 // Attempts to parse a list item marker (bullet or enumerated).
 // On success, returns length of the marker, and populates
 // data with the details.  On failure, returns 0.
 static bufsize_t parse_list_marker(cmark_mem *mem, cmark_chunk *input,
-                                   bufsize_t pos, bool interrupts_paragraph,
+                                   bufsize_t pos, cmark_node *parent,
                                    cmark_list **dataptr) {
+  bool interrupts_paragraph = parent->type == CMARK_NODE_PARAGRAPH;
   unsigned char c;
   bufsize_t startpos;
   cmark_list *data;
@@ -604,6 +648,14 @@ static bufsize_t parse_list_marker(cmark_mem *mem, cmark_chunk *input,
       pos++;
       if (!cmark_isspace(peek_at(input, pos))) {
         return 0;
+      }
+      // Are we attempting to open a new list?
+      if (parent->type != CMARK_NODE_LIST) {
+        // This list item would contain no text! Probably
+        // not a list item.
+        if (!lists_contains_item_text(input, pos)) {
+          return 0;
+        }
       }
       if (interrupts_paragraph) {
         // require non-blank content after list marker:
@@ -1238,7 +1290,7 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
                depth < MAX_LIST_DEPTH &&
                (matched = parse_list_marker(
                     parser->mem, input, parser->first_nonspace,
-                    (*container)->type == CMARK_NODE_PARAGRAPH, &data))) {
+                    *container, &data))) {
 
       // Note that we can have new list items starting with >= 4
       // spaces indent, as long as the list container is still open.
