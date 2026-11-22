@@ -198,9 +198,11 @@ char *cmark_render(cmark_mem *mem, cmark_node *root, int options, int width,
     }
   }
 
-  // ensure final newline
-  if (renderer.buffer->size == 0 || renderer.buffer->ptr[renderer.buffer->size - 1] != '\n') {
-    cmark_strbuf_putc(renderer.buffer, '\n');
+  // If the root node is a block type (i.e. not inline), ensure there's a final newline:
+  if (CMARK_NODE_TYPE_BLOCK_P(root->type)) {
+    if (renderer.buffer->size == 0 || renderer.buffer->ptr[renderer.buffer->size - 1] != '\n') {
+      cmark_strbuf_putc(renderer.buffer, '\n');
+    }
   }
 
   result = (char *)cmark_strbuf_detach(renderer.buffer);
