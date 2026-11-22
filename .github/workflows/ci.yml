@@ -1,6 +1,8 @@
 name: CI tests
 
 on: [push, workflow_dispatch]
+permissions:
+  contents: read
 
 jobs:
   linux:
