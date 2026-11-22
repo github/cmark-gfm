@@ -373,3 +373,94 @@ Issue #424 - emphasis before links
 .
 <p><em>text</em> <a href="#section">link</a></p>
 ````````````````````````````````
+
+A task list item's checked state comes from its own marker, not from
+a later `[x]` on the same line.
+
+```````````````````````````````` example tasklist
+- [ ] buy [x] item
+.
+<ul>
+<li><input type="checkbox" disabled="" /> buy [x] item</li>
+</ul>
+````````````````````````````````
+
+A task list item marker is found inside a block quote.
+
+```````````````````````````````` example tasklist
+> - [ ] quoted
+> - [x] done
+.
+<blockquote>
+<ul>
+<li><input type="checkbox" disabled="" /> quoted</li>
+<li><input type="checkbox" checked="" disabled="" /> done</li>
+</ul>
+</blockquote>
+````````````````````````````````
+
+```````````````````````````````` example tasklist
+- a
+  > 1. [X] deep
+.
+<ul>
+<li>a
+<blockquote>
+<ol>
+<li><input type="checkbox" checked="" disabled="" /> deep</li>
+</ol>
+</blockquote>
+</li>
+</ul>
+````````````````````````````````
+
+A `[ ]` that starts a continuation line is not a task list item marker.
+
+```````````````````````````````` example tasklist
+- foo
+  [ ] bar
+.
+<ul>
+<li>foo
+[ ] bar</li>
+</ul>
+````````````````````````````````
+
+A task list item marker must be followed by a space or a tab on the same line.
+
+```````````````````````````````` example tasklist
+- [ ]
+- [x]
+  more
+.
+<ul>
+<li>[ ]</li>
+<li>[x]
+more</li>
+</ul>
+````````````````````````````````
+
+A task list item marker must be on the line that opens the item.
+
+```````````````````````````````` example tasklist
+-
+  [ ] later
+.
+<ul>
+<li>[ ] later</li>
+</ul>
+````````````````````````````````
+
+A task list item marker is `[`, a space, `x` or `X`, then `]`.
+
+```````````````````````````````` example tasklist
+- [x) a
+- ( ] b
+- [y] c
+.
+<ul>
+<li>[x) a</li>
+<li>( ] b</li>
+<li>[y] c</li>
+</ul>
+````````````````````````````````

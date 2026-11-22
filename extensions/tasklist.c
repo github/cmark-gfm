@@ -71,25 +71,41 @@ static int can_contain(cmark_syntax_extension *extension, cmark_node *node,
   return (node->type == CMARK_NODE_ITEM) ? 1 : 0;
 }
 
+// The spacechar class of the original tasklist scanner: a line ending after
+// the marker does not make a task.
+static bool is_tasklist_space(unsigned char c) {
+  return c == ' ' || c == '\t' || c == '\v' || c == '\f';
+}
+
 static cmark_node *open_tasklist_item(cmark_syntax_extension *self,
                                       int indented, cmark_parser *parser,
                                       cmark_node *parent_container,
                                       unsigned char *input, int len) {
   cmark_node_type node_type = cmark_node_get_type(parent_container);
-  if (node_type != CMARK_NODE_ITEM) {
+  // The marker must be on the line that opens the item: a `[ ]` that starts
+  // a later line of the item is text.
+  if (node_type != CMARK_NODE_ITEM ||
+      parent_container->start_line != parser->line_number) {
     return NULL;
   }
 
-  bufsize_t matched = scan_tasklist(input, len, 0);
-  if (!matched) {
+  // Look for the marker where the item's content starts, not at the start of
+  // the line, so an item inside a block quote (or other container) is found.
+  int offset = cmark_parser_get_offset(parser);
+  int marker = cmark_parser_get_first_nonspace(parser);
+  if (marker + 3 >= len || input[marker] != '[' || input[marker + 2] != ']' ||
+      !(input[marker + 1] == ' ' || input[marker + 1] == 'x' ||
+        input[marker + 1] == 'X') ||
+      !is_tasklist_space(input[marker + 3])) {
     return NULL;
   }
 
   cmark_node_set_syntax_extension(parent_container, self);
-  cmark_parser_advance_offset(parser, (char *)input, 3, false);
+  cmark_parser_advance_offset(parser, (char *)input, marker - offset + 3, false);
 
-  // Either an upper or lower case X means the task is completed.
-  parent_container->as.list.checked = (strstr((char*)input, "[x]") || strstr((char*)input, "[X]"));
+  // The checked state comes from this item's marker only. Either an upper or
+  // lower case X means the task is completed.
+  parent_container->as.list.checked = input[marker + 1] != ' ';
 
   return NULL;
 }
