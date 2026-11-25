@@ -28,6 +28,10 @@ int cmark_utf8proc_is_space(int32_t uc);
 CMARK_GFM_EXPORT
 int cmark_utf8proc_is_punctuation(int32_t uc);
 
+/* CJK characters used by the cjk-friendly emphasis extension. */
+CMARK_GFM_EXPORT
+int cmark_utf8proc_is_cjk(int32_t uc);
+
 #ifdef __cplusplus
 }
 #endif
