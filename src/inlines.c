@@ -410,12 +410,45 @@ static cmark_node *handle_backticks(subject *subj, int options) {
 }
 
 
+// Read the code point immediately before a UTF-8 byte offset.
+static int32_t char_before_offset(subject *subj, bufsize_t offset) {
+  bufsize_t pos;
+  int32_t uc = 0;
+
+  if (offset <= 0)
+    return 0;
+
+  pos = offset - 1;
+  while (pos > 0 && (subj->input.data[pos] & 0xC0) == 0x80)
+    pos--;
+
+  if (cmark_utf8proc_iterate(subj->input.data + pos, offset - pos, &uc) < 0)
+    return 0;
+  return uc;
+}
+
+static bool is_variation_selector(int32_t uc) {
+  return (uc >= 0xFE00 && uc <= 0xFE0E) ||
+         (uc >= 0xE0100 && uc <= 0xE01EF);
+}
+
+static bool is_cjk_before(subject *subj, bufsize_t before_char_pos,
+                         int32_t before_char) {
+  int32_t previous;
+  if (cmark_utf8proc_is_cjk(before_char))
+    return true;
+  if (!is_variation_selector(before_char))
+    return false;
+  previous = char_before_offset(subj, before_char_pos);
+  return cmark_utf8proc_is_cjk(previous) != 0;
+}
+
 // Scan ***, **, or * and return number scanned, or 0.
 // Advances position.
 static int scan_delims(subject *subj, unsigned char c, bool *can_open,
                        bool *can_close) {
   int numdelims = 0;
-  bufsize_t before_char_pos, after_char_pos;
+  bufsize_t before_char_pos = 0, after_char_pos;
   int32_t after_char = 0;
   int32_t before_char = 0;
   int len;
@@ -460,19 +493,28 @@ static int scan_delims(subject *subj, unsigned char c, bool *can_open,
   }
   }
 
+  /* CJK characters are valid flanking boundaries. This is the
+   * cjk-friendly amendment to CommonMark used by MarkText and Comrak:
+   * 例子**"加粗"**例子 must be emphasis even though the inner characters are
+   * punctuation. */
+  bool before_cjk = is_cjk_before(subj, before_char_pos, before_char);
+  bool after_cjk = cmark_utf8proc_is_cjk(after_char) != 0;
+  bool before_boundary = cmark_utf8proc_is_space(before_char) ||
+                         cmark_utf8proc_is_punctuation(before_char) ||
+                         before_cjk;
+  bool after_boundary = cmark_utf8proc_is_space(after_char) ||
+                        cmark_utf8proc_is_punctuation(after_char) ||
+                        after_cjk;
+
   left_flanking = numdelims > 0 && !cmark_utf8proc_is_space(after_char) &&
                   (!cmark_utf8proc_is_punctuation(after_char) ||
-                   cmark_utf8proc_is_space(before_char) ||
-                   cmark_utf8proc_is_punctuation(before_char));
+                   before_boundary || after_cjk);
   right_flanking = numdelims > 0 && !cmark_utf8proc_is_space(before_char) &&
                    (!cmark_utf8proc_is_punctuation(before_char) ||
-                    cmark_utf8proc_is_space(after_char) ||
-                    cmark_utf8proc_is_punctuation(after_char));
+                    after_boundary || before_cjk);
   if (c == '_') {
-    *can_open = left_flanking &&
-                (!right_flanking || cmark_utf8proc_is_punctuation(before_char));
-    *can_close = right_flanking &&
-                 (!left_flanking || cmark_utf8proc_is_punctuation(after_char));
+    *can_open = left_flanking && (!right_flanking || before_boundary);
+    *can_close = right_flanking && (!left_flanking || after_boundary);
   } else if (c == '\'' || c == '"') {
     *can_open = left_flanking && !right_flanking &&
 	         before_char != ']' && before_char != ')';
@@ -481,6 +523,22 @@ static int scan_delims(subject *subj, unsigned char c, bool *can_open,
     *can_open = left_flanking;
     *can_close = right_flanking;
   }
+
+  /* MarkText's CJK compatibility also recognises a closing ** before a
+   * fullwidth colon in labels such as **来源：**2013年. The left side of that
+   * run is preceded by CJK text, not a space/punctuation boundary. */
+  if (c == '*' && numdelims == 2 && before_char == 0xFF1A) {
+    int32_t two_before = char_before_offset(subj, before_char_pos);
+    bool ascii_after = (after_char >= '0' && after_char <= '9') ||
+                       (after_char >= 'A' && after_char <= 'Z') ||
+                       (after_char >= 'a' && after_char <= 'z');
+    if (cmark_utf8proc_is_cjk(two_before) &&
+        (ascii_after || cmark_utf8proc_is_space(after_char) ||
+         after_char == 10 || after_char == 0)) {
+      *can_close = true;
+    }
+  }
+
   return numdelims;
 }
 
@@ -1680,7 +1738,7 @@ int cmark_inline_parser_scan_delimiters(cmark_inline_parser *parser,
                                   int *punct_before,
                                   int *punct_after) {
   int numdelims = 0;
-  bufsize_t before_char_pos;
+  bufsize_t before_char_pos = 0;
   int32_t after_char = 0;
   int32_t before_char = 0;
   int len;
@@ -1717,10 +1775,14 @@ int cmark_inline_parser_scan_delimiters(cmark_inline_parser *parser,
   space_before = cmark_utf8proc_is_space(before_char) != 0;
   space_after = cmark_utf8proc_is_space(after_char) != 0;
 
+  bool before_cjk = is_cjk_before(parser, before_char_pos, before_char);
+  bool after_cjk = cmark_utf8proc_is_cjk(after_char) != 0;
   *left_flanking = numdelims > 0 && !cmark_utf8proc_is_space(after_char) &&
-                  !(*punct_after && !space_before && !*punct_before);
+                  !(*punct_after && !space_before && !*punct_before &&
+                    !before_cjk && !after_cjk);
   *right_flanking = numdelims > 0 && !cmark_utf8proc_is_space(before_char) &&
-                  !(*punct_before && !space_after && !*punct_after);
+                  !(*punct_before && !space_after && !*punct_after &&
+                    !before_cjk && !after_cjk);
 
   return numdelims;
 }
