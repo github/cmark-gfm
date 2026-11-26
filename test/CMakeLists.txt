@@ -103,6 +103,13 @@ IF (PYTHONINTERP_FOUND)
     "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm"
     )
 
+  add_test(cjk_emphasis_executable
+    ${PYTHON_EXECUTABLE}
+    "${CMAKE_CURRENT_SOURCE_DIR}/spec_tests.py" "--no-normalize" "--spec"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cjk_emphasis.txt" "--program"
+    "${CMAKE_CURRENT_BINARY_DIR}/../src/cmark-gfm" "--extensions" "strikethrough"
+    )
+
 
 ELSE(PYTHONINTERP_FOUND)
 

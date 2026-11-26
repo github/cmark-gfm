@@ -315,3 +315,68 @@ int cmark_utf8proc_is_punctuation(int32_t uc) {
       uc == 92917 || (uc >= 92983 && uc <= 92987) || uc == 92996 ||
       uc == 113823);
 }
+
+
+/* CJK ranges used by the cjk-friendly emphasis extension.
+ * Snapshot follows tats-u/markdown-cjk-friendly (Unicode 18), matching the
+ * ranges used by Comrak's cjk-friendly-emphasis extension. */
+int cmark_utf8proc_is_cjk(int32_t uc) {
+  if (uc < 0x1100)
+    return 0;
+  return ((uc >= 0x1100 && uc <= 0x11ff) || uc == 0x20a9 ||
+          (uc >= 0x2329 && uc <= 0x232a) ||
+          (uc >= 0x2630 && uc <= 0x2637) ||
+          (uc >= 0x268a && uc <= 0x268f) ||
+          (uc >= 0x2e80 && uc <= 0x2e99) ||
+          (uc >= 0x2e9b && uc <= 0x2ef3) ||
+          (uc >= 0x2f00 && uc <= 0x2fd5) ||
+          (uc >= 0x2ff0 && uc <= 0x303e) ||
+          (uc >= 0x3041 && uc <= 0x3096) ||
+          (uc >= 0x3099 && uc <= 0x30ff) ||
+          (uc >= 0x3105 && uc <= 0x312f) ||
+          (uc >= 0x3131 && uc <= 0x318e) ||
+          (uc >= 0x3190 && uc <= 0x31e5) ||
+          (uc >= 0x31ef && uc <= 0x321e) ||
+          (uc >= 0x3220 && uc <= 0x3247) ||
+          (uc >= 0x3250 && uc <= 0xa48c) ||
+          (uc >= 0xa490 && uc <= 0xa4c6) ||
+          (uc >= 0xa960 && uc <= 0xa97c) ||
+          (uc >= 0xac00 && uc <= 0xd7a3) ||
+          (uc >= 0xd7b0 && uc <= 0xd7c6) ||
+          (uc >= 0xd7cb && uc <= 0xd7fb) ||
+          (uc >= 0xf900 && uc <= 0xfaff) ||
+          (uc >= 0xfe10 && uc <= 0xfe19) ||
+          (uc >= 0xfe30 && uc <= 0xfe52) ||
+          (uc >= 0xfe54 && uc <= 0xfe66) ||
+          (uc >= 0xfe68 && uc <= 0xfe6b) ||
+          (uc >= 0xff01 && uc <= 0xffbe) ||
+          (uc >= 0xffc2 && uc <= 0xffc7) ||
+          (uc >= 0xffca && uc <= 0xffcf) ||
+          (uc >= 0xffd2 && uc <= 0xffd7) ||
+          (uc >= 0xffda && uc <= 0xffdc) ||
+          (uc >= 0xffe0 && uc <= 0xffe6) ||
+          (uc >= 0xffe8 && uc <= 0xffee) ||
+          (uc >= 0x16fe0 && uc <= 0x16fe4) ||
+          (uc >= 0x16ff0 && uc <= 0x16ff6) ||
+          (uc >= 0x17000 && uc <= 0x18cda) ||
+          (uc >= 0x18cff && uc <= 0x18d20) ||
+          (uc >= 0x18d80 && uc <= 0x18df2) ||
+          (uc >= 0x18e00 && uc <= 0x19191) ||
+          (uc >= 0x191a0 && uc <= 0x191d2) ||
+          (uc >= 0x1aff0 && uc <= 0x1aff3) ||
+          (uc >= 0x1aff5 && uc <= 0x1affb) ||
+          (uc >= 0x1affd && uc <= 0x1affe) ||
+          (uc >= 0x1b000 && uc <= 0x1b128) || uc == 0x1b132 ||
+          (uc >= 0x1b150 && uc <= 0x1b152) || uc == 0x1b155 ||
+          (uc >= 0x1b164 && uc <= 0x1b168) ||
+          (uc >= 0x1b170 && uc <= 0x1b2fb) ||
+          (uc >= 0x1d300 && uc <= 0x1d356) ||
+          (uc >= 0x1d360 && uc <= 0x1d376) || uc == 0x1f1ae ||
+          uc == 0x1f200 || uc == 0x1f202 ||
+          (uc >= 0x1f210 && uc <= 0x1f219) ||
+          (uc >= 0x1f21b && uc <= 0x1f22e) ||
+          (uc >= 0x1f230 && uc <= 0x1f231) || uc == 0x1f237 ||
+          uc == 0x1f23b || (uc >= 0x1f240 && uc <= 0x1f248) ||
+          (uc >= 0x1f260 && uc <= 0x1f265) || uc == 0x1f7da ||
+          (uc >= 0x20000 && uc <= 0x3fffd));
+}
